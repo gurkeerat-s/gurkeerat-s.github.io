@@ -26,6 +26,6 @@
 
 ---
 
-🌐 **Portfolio:** YOUR_PORTFOLIO_URL *(add after you deploy)*  ·  💼 **LinkedIn:** [in/gurkeerat-sappal](https://www.linkedin.com/in/gurkeerat-sappal)  ·  ✉️ **gurkeeratsappal@gmail.com**
+🌐 **Portfolio:** [gurkeerat-s.github.io](https://gurkeerat-s.github.io)  ·  💼 **LinkedIn:** [in/gurkeerat-sappal](https://www.linkedin.com/in/gurkeerat-sappal)  ·  ✉️ **gurkeeratsappal@gmail.com**
 
 **Toolbox:** Python · TypeScript · PyTorch · LLM agents & tool-calling · model fine-tuning (LoRA) & serving (vLLM) · real-time voice (LiveKit) · RAG · FastAPI
