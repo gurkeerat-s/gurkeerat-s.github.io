@@ -50,6 +50,10 @@
   footer a{text-decoration:none; border-bottom:1px solid var(--line)}
   footer a:hover{color:var(--accent)}
   .contact{display:flex; flex-wrap:wrap; gap:18px; margin-top:8px}
+  #summon-btn{position:fixed; right:20px; bottom:20px; z-index:40; font:inherit; font-size:13px;
+    padding:9px 14px; border-radius:999px; cursor:pointer; background:var(--fg); color:var(--bg);
+    border:none; box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  #summon-btn:hover{background:var(--accent)}
 </style>
 </head>
 <body>
@@ -124,6 +128,24 @@
     const dark = !root.classList.contains('dark');
     setTheme(dark);
     localStorage.setItem('theme', dark ? 'dark' : 'light');
+  });
+</script>
+
+<!-- VRM companion: lazy-loaded easter egg. Delete this button + script to remove her entirely. -->
+<button id="summon-btn">✨ say hi 🌸</button>
+<script>
+  const sb = document.getElementById('summon-btn');
+  sb.addEventListener('click', async () => {
+    sb.textContent = 'summoning… ✨';
+    try {
+      const m = await import('./companion.js');
+      m.initCompanion();
+      sb.style.display = 'none';
+      sb.textContent = '✨ say hi 🌸';
+    } catch (e) {
+      sb.textContent = '😣 try again';
+      console.error(e);
+    }
   });
 </script>
 </body>
