@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# editors
+.vscode/
+.idea/
+
+# logs / deps (none here yet, but just in case)
+*.log
+node_modules/
+
+# never commit secrets
+.env
+.env.*
+!.env.example
