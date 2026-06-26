@@ -24,15 +24,16 @@ function injectStyles() {
   s.id = 'cmp-styles';
   s.textContent = `
   #cmp-panel{position:fixed;right:20px;bottom:20px;z-index:50;width:300px;max-width:calc(100vw - 28px);
-    height:430px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;
+    height:470px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;
     background:var(--bg);border:1px solid var(--line);border-radius:16px;overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.22)}
-  #cmp-canvas{flex:1;width:100%;display:block;cursor:grab}
+  #cmp-canvas{flex:1 1 0;min-height:0;width:100%;display:block;cursor:grab}
   #cmp-close{position:absolute;top:8px;right:10px;z-index:2;background:var(--chip);border:1px solid var(--line);
     color:var(--fg);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:15px;line-height:1}
-  #cmp-bubble{margin:0 12px;padding:10px 12px;background:var(--chip);border:1px solid var(--line);
-    border-radius:12px;font-size:13px;color:var(--fg);min-height:42px}
-  #cmp-pills{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 12px}
+  #cmp-bubble{flex:0 0 auto;margin:10px 12px 0;padding:10px 12px;background:var(--chip);
+    border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--fg);
+    max-height:96px;overflow-y:auto}
+  #cmp-pills{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 12px}
   #cmp-pills button{font:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;
     background:transparent;border:1px solid var(--line);color:var(--fg)}
   #cmp-pills button:hover{border-color:var(--accent);color:var(--accent)}
