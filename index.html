@@ -3,155 +3,124 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Gurkeerat Sappal — AI/ML Engineer</title>
-<meta name="description" content="CS · Statistics · Math @ University of Toronto. I build production AI systems — fine-tuned + self-hosted models and real-time LLM agents." />
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<title>Gurkeerat Sappal</title>
+<meta name="description" content="CS · Statistics · Math @ University of Toronto. I build and ship AI systems — fine-tuned models, real-time voice, and LLM agents." />
 <style>
-  :root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-  html { scroll-behavior: smooth; }
-  body { background:#0a0a0f; color:#e7e7ea; }
-  .glow { background: radial-gradient(60% 50% at 50% 0%, rgba(99,102,241,.18), transparent 70%); }
-  .card { transition: transform .15s ease, border-color .15s ease, background .15s ease; }
-  .card:hover { transform: translateY(-3px); border-color: rgba(129,140,248,.5); background:#14141c; }
-  .pill { background:#1a1a25; border:1px solid #262633; }
-  a { -webkit-tap-highlight-color: transparent; }
+  :root{
+    --bg:#ffffff; --fg:#141414; --muted:#666; --line:rgba(0,0,0,.10); --chip:rgba(0,0,0,.05);
+  }
+  html.dark{
+    --bg:#0a0a0a; --fg:#e8e8e8; --muted:#888; --line:rgba(255,255,255,.13); --chip:rgba(255,255,255,.07);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6; font-size:16px; transition:background .2s ease,color .2s ease;
+  }
+  .wrap{max-width:720px; margin:0 auto; padding:0 24px}
+  a{color:inherit}
+  nav{display:flex; align-items:center; gap:22px; padding:26px 0; font-size:14px}
+  nav a{color:var(--muted); text-decoration:none}
+  nav a:hover{color:var(--fg)}
+  nav .spacer{flex:1}
+  .toggle{background:none; border:1px solid var(--line); color:var(--muted); font:inherit;
+    font-size:13px; padding:3px 10px; border-radius:6px; cursor:pointer}
+  .toggle:hover{color:var(--fg)}
+  header{padding:18px 0 8px}
+  h1{font-size:30px; font-weight:700; letter-spacing:-.02em; margin:0 0 8px}
+  .lede{color:var(--muted); margin:0; max-width:46ch}
+  .section-label{font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);
+    margin:48px 0 4px}
+  .project{padding:26px 0; border-top:1px solid var(--line)}
+  .project h3{margin:0 0 6px; font-size:18px; font-weight:650}
+  .project p{margin:0 0 10px}
+  .project strong{font-weight:650}
+  .tech{font-size:13px; color:var(--muted)}
+  .links{margin-top:10px; display:flex; flex-wrap:wrap; gap:16px; font-size:14px}
+  .links a{text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px}
+  .links a:hover{border-color:var(--fg)}
+  .muted-note{font-size:13px; color:var(--muted); font-style:italic}
+  footer{border-top:1px solid var(--line); margin-top:40px; padding:26px 0 60px; color:var(--muted); font-size:14px}
+  footer a{text-decoration:none; border-bottom:1px solid var(--line)}
+  footer a:hover{color:var(--fg)}
+  .contact{display:flex; flex-wrap:wrap; gap:18px; margin-top:8px}
 </style>
 </head>
-<body class="bg-[#0a0a0f] text-zinc-200 antialiased">
+<body>
+<div class="wrap">
 
-<!-- ===== CONFIG: edit these, everything else is wired to them ===== -->
-<script>
-  const PROFILE = {
-    name: "Gurkeerat Sappal",
-    email: "gurkeeratsappal@gmail.com",
-    github: "https://github.com/gurkeerat-s",
-    linkedin: "https://www.linkedin.com/in/gurkeerat-sappal",
-  };
-</script>
-
-<!-- nav -->
-<header class="sticky top-0 z-20 backdrop-blur bg-[#0a0a0f]/70 border-b border-zinc-900">
-  <nav class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-    <span class="font-bold tracking-tight">GS</span>
-    <div class="flex items-center gap-6 text-sm text-zinc-400">
-      <a href="#projects" class="hover:text-white">Projects</a>
-      <a href="#about" class="hover:text-white">About</a>
-      <a id="nav-email" href="#" class="hover:text-white">Contact</a>
-    </div>
+  <nav>
+    <a href="#work">work</a>
+    <a href="#about">about</a>
+    <a href="mailto:gurkeeratsappal@gmail.com">contact</a>
+    <span class="spacer"></span>
+    <button id="theme-toggle" class="toggle" aria-label="Toggle dark mode">dark</button>
   </nav>
-</header>
 
-<!-- hero -->
-<section class="glow">
-  <div class="max-w-5xl mx-auto px-6 pt-20 pb-16">
-    <p class="text-indigo-400 font-medium mb-3">CS · Statistics · Math @ University of Toronto</p>
-    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.05]">
-      I build production<br/>AI systems.
-    </h1>
-    <p class="mt-6 text-lg text-zinc-400 max-w-2xl">
-      Not toy demos — a fine-tuned voice model I serve myself on a single GPU, and a suite of
-      real-time LLM agents shipping in a real business. End to end: model → backend → frontend → deployed.
-    </p>
-    <div class="mt-8 flex flex-wrap gap-3">
-      <a id="btn-github" href="#" class="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200">GitHub</a>
-      <a id="btn-linkedin" href="#" class="px-5 py-2.5 rounded-lg border border-zinc-700 font-semibold hover:border-zinc-500">LinkedIn</a>
-      <a id="btn-email" href="#" class="px-5 py-2.5 rounded-lg border border-zinc-700 font-semibold hover:border-zinc-500">Email</a>
+  <header>
+    <h1>hi, i'm gurkeerat 👋</h1>
+    <p class="lede">cs · statistics · math @ the university of toronto. i build and ship real AI
+      systems — fine-tuned models, real-time voice, and LLM agents. end to end, fast.</p>
+  </header>
+
+  <div class="section-label" id="work">things i've built</div>
+
+  <div class="project">
+    <h3>Self-Hosted Voice Agent</h3>
+    <p>A full-duplex <strong>real-time voice agent</strong> — speak and interrupt live — with a
+      <strong>custom fine-tuned TTS voice</strong>, built to run on a single GPU with no external
+      inference APIs. LoRA fine-tuned <strong>Orpheus 3B</strong> TTS on a self-collected 850-clip
+      dataset (SNAC codec tokenization), served with <strong>vLLM</strong>; real-time loop with
+      Silero VAD, faster-whisper streaming STT, barge-in, and LLM KV-cache warming.</p>
+    <div class="tech">PyTorch · PEFT/LoRA · vLLM · Orpheus 3B · faster-whisper · FastAPI · RunPod GPU</div>
+    <!-- <div class="links"><a href="#">demo</a> <a href="#">code</a></div> -->
+  </div>
+
+  <div class="project">
+    <h3>Saleable — Real-Estate AI Suite</h3>
+    <p>A suite of <strong>four AI apps</strong> for a real-estate brokerage over a shared MLS data
+      layer: a <strong>real-time phone voice agent</strong> on LiveKit (SIP telephony, function-calling
+      for MLS search + showing booking + Twilio SMS), a customer <strong>chatbot</strong>, a
+      <strong>contract-review copilot</strong> over Ontario OREA PDFs (compliance guardrails + per-figure
+      source citations), and an <strong>OREA form generator</strong>. Provider-swappable LLM pipeline,
+      plus a <strong>ChromaDB RAG</strong> speech-to-speech build on an L40S.</p>
+    <div class="tech">FastAPI · LiveKit Agents · Claude / Grok · ChromaDB (RAG) · Twilio · pypdf</div>
+    <!-- <div class="links"><a href="#">demo</a> <a href="#">code</a></div> -->
+  </div>
+
+  <div class="section-label" id="about">about</div>
+  <div class="project" style="border-top:none; padding-top:14px">
+    <p>I'm a CS, Statistics &amp; Math student at the University of Toronto (Mississauga). I like building
+      AI systems that actually ship — fine-tuning and serving models, wiring up real-time LLM agents,
+      and turning them into products people use. Looking for an <strong>AI/ML internship</strong> where
+      I can plug in and ship value fast.</p>
+  </div>
+
+  <footer>
+    open to AI/ML internship &amp; co-op roles.
+    <div class="contact">
+      <a href="mailto:gurkeeratsappal@gmail.com">email</a>
+      <a href="https://github.com/gurkeerat-s">github</a>
+      <a href="https://www.linkedin.com/in/gurkeerat-sappal">linkedin</a>
     </div>
-  </div>
-</section>
+  </footer>
 
-<!-- projects -->
-<section id="projects" class="max-w-5xl mx-auto px-6 py-12">
-  <h2 class="text-sm font-semibold uppercase tracking-widest text-zinc-500 mb-6">Selected work</h2>
-  <div id="grid" class="grid sm:grid-cols-2 gap-5"></div>
-</section>
-
-<!-- about -->
-<section id="about" class="max-w-5xl mx-auto px-6 py-12 border-t border-zinc-900">
-  <h2 class="text-sm font-semibold uppercase tracking-widest text-zinc-500 mb-6">About</h2>
-  <div class="max-w-2xl text-zinc-300 space-y-4 leading-relaxed">
-    <p>I'm a CS, Statistics &amp; Math student at the University of Toronto (Mississauga) who likes
-       building AI systems that actually ship — fine-tuning and serving models, wiring up real-time
-       LLM agents, and turning them into products people use.</p>
-    <p>I move fast and end-to-end: model → backend → frontend → deployed. I'm looking for an AI/ML
-       internship where I can plug in and ship value quickly.</p>
-  </div>
-</section>
-
-<!-- footer -->
-<footer class="max-w-5xl mx-auto px-6 py-12 border-t border-zinc-900 text-zinc-400">
-  <p class="text-white font-semibold text-lg">Let's talk.</p>
-  <p class="mt-2">Open to AI/ML internship &amp; co-op roles.</p>
-  <div class="mt-4 flex flex-wrap gap-5 text-sm">
-    <a id="foot-email" href="#" class="hover:text-white">Email</a>
-    <a id="foot-github" href="#" class="hover:text-white">GitHub</a>
-    <a id="foot-linkedin" href="#" class="hover:text-white">LinkedIn</a>
-  </div>
-  <p class="mt-8 text-xs text-zinc-600">© <span id="yr"></span> Gurkeerat Sappal</p>
-</footer>
+</div>
 
 <script>
-  // ===== PROJECTS =====
-  const projects = [
-    {
-      title: "Self-Hosted Voice Agent",
-      kind: "Voice AI · LLM/TTS fine-tuning",
-      pitch: "A full-duplex voice agent — speak and interrupt in real time — with a custom fine-tuned TTS voice, built to run on a single GPU with no external inference APIs.",
-      highlights: [
-        "LoRA fine-tuned Orpheus 3B TTS (plus a parallel Sesame CSM-1B) on a self-collected 850-clip dataset; audio tokenized via the SNAC 24kHz codec",
-        "Serves TTS with vLLM in its own process to avoid event-loop conflicts; FastAPI app talks to it over HTTP",
-        "Real-time loop: Silero VAD endpointing, faster-whisper streaming STT, a LISTENING/THINKING/SPEAKING state machine with barge-in and LLM KV-cache warming on partial transcripts",
-        "Fully local at runtime — Llama 3.1 8B via Ollama, zero external inference calls",
-      ],
-      stack: ["Python", "PyTorch", "PEFT / LoRA", "vLLM", "Orpheus 3B / CSM-1B", "faster-whisper", "FastAPI", "RunPod GPU"],
-      status: "Working prototype on RunPod GPU · real-time WebSocket server + browser client",
-      link: "",
-    },
-    {
-      title: "Saleable — Real-Estate AI Suite",
-      kind: "LLM agents · Real-time voice · RAG",
-      pitch: "A suite of four AI apps for a real-estate brokerage, sharing one MLS data layer: a customer chatbot, an inbound-phone voice agent, an agent-facing contract copilot, and an automated OREA form generator.",
-      highlights: [
-        "Voice agent (Ava): real-time inbound phone calls on LiveKit Agents — SIP telephony, server-VAD, function-calling for MLS search + showing booking + Twilio SMS, with a provider-swappable pipeline (Grok realtime ↔ Deepgram/Cartesia/Claude)",
-        "Chat (Ava): FastAPI web widget that answers listing questions, searches MLS, books showings, and emails lead summaries",
-        "CopilotRE: Claude + pypdf over Ontario OREA contract PDFs — flags red flags/deadlines with per-figure source citations, behind anti-hallucination and UPL/TRESA compliance guardrails",
-        "FormFillRE: auto-generates 10+ OREA form PDFs from chat; plus an experimental speech-to-speech build (NVIDIA PersonaPlex + ChromaDB RAG) on an L40S",
-        "Shared MLS layer over an OData API that auto-corrects LLM-generated query filters and formats prices for TTS",
-      ],
-      stack: ["Python", "FastAPI", "LiveKit Agents", "Claude / Grok", "ChromaDB (RAG)", "Twilio", "pypdf"],
-      status: "Multiple working FastAPI services · voice agent provisioned on LiveKit Cloud",
-      link: "",
-    },
-  ];
-
-  // wire profile links
-  const set = (id, href) => { const e=document.getElementById(id); if(e) e.href=href; };
-  set("btn-github", PROFILE.github); set("foot-github", PROFILE.github);
-  set("btn-linkedin", PROFILE.linkedin); set("foot-linkedin", PROFILE.linkedin);
-  const mailto = "mailto:" + PROFILE.email;
-  set("btn-email", mailto); set("foot-email", mailto); set("nav-email", mailto);
-  document.getElementById("yr").textContent = new Date().getFullYear();
-
-  // render project cards
-  document.getElementById("grid").innerHTML = projects.map(p => `
-    <article class="card rounded-xl border border-zinc-800 bg-[#101018] p-6 flex flex-col">
-      <div class="flex items-start justify-between gap-3">
-        <h3 class="text-lg font-bold text-white">${p.title}</h3>
-        ${p.link ? `<a href="${p.link}" target="_blank" rel="noopener" class="text-xs text-indigo-400 hover:text-indigo-300 whitespace-nowrap">live ↗</a>` : ``}
-      </div>
-      <p class="text-xs text-indigo-400/80 mt-0.5">${p.kind}</p>
-      <p class="mt-3 text-sm text-zinc-300">${p.pitch}</p>
-      <ul class="mt-3 space-y-1.5 text-sm text-zinc-400 list-disc list-inside marker:text-indigo-500">
-        ${p.highlights.map(h => `<li>${h}</li>`).join("")}
-      </ul>
-      <div class="mt-4 flex flex-wrap gap-2">
-        ${p.stack.map(s => `<span class="pill text-xs px-2 py-1 rounded-md text-zinc-300">${s}</span>`).join("")}
-      </div>
-      <p class="mt-4 text-xs text-zinc-500">${p.status}</p>
-    </article>
-  `).join("");
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const saved = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const setTheme = d => { root.classList.toggle('dark', d); btn.textContent = d ? 'light' : 'dark'; };
+  setTheme(saved ? saved === 'dark' : prefersDark);
+  btn.addEventListener('click', () => {
+    const dark = !root.classList.contains('dark');
+    setTheme(dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  });
 </script>
 </body>
 </html>
