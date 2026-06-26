@@ -100,7 +100,7 @@ export function initCompanion() {
     vrm = gltf.userData.vrm;
     VRMUtils.removeUnnecessaryVertices(gltf.scene);
     VRMUtils.combineSkeletons(gltf.scene);
-    vrm.scene.rotation.y = Math.PI;
+    vrm.scene.rotation.y = 0; // VRM 1.0 already faces +Z, toward the camera — no flip needed
     if (vrm.lookAt) vrm.lookAt.target = lookTarget;
     scene.add(vrm.scene);
     bubble.textContent = "hi! i'm gurkeerat's lil AI companion 🌸 tap a button:";
