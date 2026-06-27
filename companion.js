@@ -135,10 +135,10 @@ export function initCompanion() {
       // arms: idle sway is the base pose (arms hang down, gentle sway)
       const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
       const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
-      let luaZ = 1.18 + Math.sin(t * 0.8) * 0.10, luaX = Math.sin(t * 0.9) * 0.13;
-      let ruaZ = -1.18 - Math.sin(t * 0.8 + 0.6) * 0.10, ruaX = Math.sin(t * 0.9 + 0.6) * 0.13;
-      let llaX = -0.12 + Math.sin(t * 0.9) * 0.08, llaZ = 0;
-      let rlaX = -0.12 + Math.sin(t * 0.9 + 0.6) * 0.08, rlaZ = 0;
+      let luaZ = 1.42 + Math.sin(t * 0.8) * 0.05, luaX = Math.sin(t * 0.9) * 0.05;
+      let ruaZ = -1.42 - Math.sin(t * 0.8 + 0.6) * 0.05, ruaX = Math.sin(t * 0.9 + 0.6) * 0.05;
+      let llaX = -0.16 + Math.sin(t * 0.9) * 0.05, llaZ = 0;
+      let rlaX = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05, rlaZ = 0;
 
       // gesture scheduler: occasionally blend a wave or arm-cross over the idle
       gestureTimer -= dt;
@@ -185,9 +185,6 @@ export function initCompanion() {
       // emote: smoothly ramp the current expression toward its target, then apply it
       emoteVal += (emoteTarget - emoteVal) * Math.min(1, dt * 6);
       vrm.expressionManager?.setValue(emoteName, Math.max(0, Math.min(1, emoteVal)));
-      // mouth: gentle talking movement while a bubble is up, closed otherwise
-      const talk = bubbleOn ? (0.16 + 0.16 * (Math.sin(t * 11) * 0.5 + 0.5)) : 0;
-      vrm.expressionManager?.setValue('aa', talk);
 
       vrm.update(dt);
 
