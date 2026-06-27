@@ -138,7 +138,7 @@
   sb.addEventListener('click', async () => {
     sb.textContent = 'summoning… ✨';
     try {
-      const m = await import('./companion.js?v=4');
+      const m = await import('./companion.js?v=5');
       m.initCompanion();
       sb.style.display = 'none';
       sb.textContent = '✨ say hi 🌸';

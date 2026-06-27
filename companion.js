@@ -37,6 +37,8 @@ function injectStyles() {
   #cmp-pills button{font:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;
     background:transparent;border:1px solid var(--line);color:var(--fg)}
   #cmp-pills button:hover{border-color:var(--accent);color:var(--accent)}
+  #cmp-credit{flex:0 0 auto;padding:0 12px 10px;font-size:10px;color:var(--muted);opacity:.7}
+  #cmp-credit a{color:inherit}
   `;
   document.head.appendChild(s);
 }
@@ -48,7 +50,8 @@ function buildUI() {
     <button id="cmp-close" aria-label="close">×</button>
     <canvas id="cmp-canvas"></canvas>
     <div id="cmp-bubble"></div>
-    <div id="cmp-pills"></div>`;
+    <div id="cmp-pills"></div>
+    <div id="cmp-credit">avatar: メカクレ少女 by ギリギリチャンネル · <a href="https://hub.vroid.com" target="_blank" rel="noopener">VRoid Hub</a></div>`;
   document.body.appendChild(panel);
   return {
     panel,
@@ -102,7 +105,7 @@ export function initCompanion() {
     vrm = gltf.userData.vrm;
     VRMUtils.removeUnnecessaryVertices(gltf.scene);
     VRMUtils.combineSkeletons(gltf.scene);
-    vrm.scene.rotation.y = 0; // VRM 1.0 already faces +Z, toward the camera — no flip needed
+    VRMUtils.rotateVRM0(vrm); // VRM 0.x faces -Z; flip it to +Z (no-op for VRM 1.0) — version-agnostic
     if (vrm.lookAt) vrm.lookAt.target = lookTarget;
     scene.add(vrm.scene);
     bubble.textContent = "hi! i'm gurkeerat's lil AI companion 🌸 tap a button:";
