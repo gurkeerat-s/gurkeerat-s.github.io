@@ -39,8 +39,9 @@ function injectStyles() {
     background:var(--chip);border:1px solid var(--line);color:var(--fg);border-radius:999px;
     padding:6px 13px;font:inherit;font-size:12px}
   #cmp-close:hover{border-color:var(--accent);color:var(--accent)}
-  #cmp-credit{position:fixed;left:12px;bottom:12px;z-index:46;pointer-events:auto;
-    font-size:10px;color:var(--muted);opacity:.6}
+  #cmp-credit{position:fixed;left:10px;bottom:8px;z-index:46;pointer-events:auto;
+    font-size:9px;color:var(--muted);opacity:.28}
+  #cmp-credit:hover{opacity:.6}
   #cmp-credit a{color:inherit}
   `;
   document.head.appendChild(s);
@@ -60,7 +61,7 @@ export function initCompanion() {
   close.id = 'cmp-close'; close.textContent = '✕ hide';
   const credit = document.createElement('div');
   credit.id = 'cmp-credit';
-  credit.innerHTML = 'avatar: メカクレ少女 by ギリギリチャンネル · <a href="https://hub.vroid.com" target="_blank" rel="noopener">VRoid Hub</a>';
+  credit.innerHTML = 'avatar · ギリギリチャンネル / <a href="https://hub.vroid.com" target="_blank" rel="noopener">VRoid Hub</a>';
   document.body.appendChild(close);
   document.body.appendChild(credit);
 
