@@ -111,11 +111,14 @@ export function initCompanion() {
     // load a real VRM animation (loops smoothly) -> drives the body instead of procedural sway
     const aLoader = new GLTFLoader();
     aLoader.register((p) => new VRMAnimationLoaderPlugin(p));
-    aLoader.load('anim-relax.vrma', (ag) => {
+    aLoader.load('anim-lookaround.vrma', (ag) => {
       const va = ag.userData.vrmAnimations?.[0];
       if (!va || !vrm) return;
       mixer = new THREE.AnimationMixer(vrm.scene);
-      mixer.clipAction(createVRMAnimationClip(va, vrm)).play();   // LoopRepeat by default
+      const action = mixer.clipAction(createVRMAnimationClip(va, vrm));
+      action.setLoop(THREE.LoopPingPong);   // forward then reverse -> no hard-cut chop on loop
+      action.timeScale = 0.7;               // a touch slower / calmer
+      action.play();
     }, undefined, (err) => console.warn('[companion] animation load failed, using procedural idle', err));
   }, undefined, (e) => {
     console.error('[companion] avatar load failed', e);
