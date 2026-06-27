@@ -4,6 +4,7 @@
 import * as THREE from 'https://esm.sh/three@0.170.0';
 import { GLTFLoader } from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from 'https://esm.sh/@pixiv/three-vrm@3.4.0?deps=three@0.170.0';
+import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from 'https://esm.sh/@pixiv/three-vrm-animation@3.4.0?deps=three@0.170.0';
 
 const LINES = [
   "hi! i'm gurkeerat's lil AI companion 🌸",
@@ -78,7 +79,7 @@ export function initCompanion() {
   }
   resize(); window.addEventListener('resize', resize);
 
-  let vrm = null, baseY = 0, t = 0;
+  let vrm = null, baseY = 0, t = 0, mixer = null;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0;
   const HOME_X = 1.0;
@@ -106,6 +107,16 @@ export function initCompanion() {
     VRMUtils.rotateVRM0(vrm);
     baseY = vrm.scene.rotation.y;
     scene.add(vrm.scene);
+
+    // load a real VRM animation (loops smoothly) -> drives the body instead of procedural sway
+    const aLoader = new GLTFLoader();
+    aLoader.register((p) => new VRMAnimationLoaderPlugin(p));
+    aLoader.load('anim-relax.vrma', (ag) => {
+      const va = ag.userData.vrmAnimations?.[0];
+      if (!va || !vrm) return;
+      mixer = new THREE.AnimationMixer(vrm.scene);
+      mixer.clipAction(createVRMAnimationClip(va, vrm)).play();   // LoopRepeat by default
+    }, undefined, (err) => console.warn('[companion] animation load failed, using procedural idle', err));
   }, undefined, (e) => {
     console.error('[companion] avatar load failed', e);
     bubble.textContent = "couldn't load me 😣"; bubble.style.opacity = 1;
@@ -119,26 +130,27 @@ export function initCompanion() {
     const dt = Math.min(clock.getDelta(), 0.05);
     if (vrm) {
       t += dt;
-      // smooth procedural idle
-      const breathe = Math.sin(t * 1.5);
-      const spine = B('spine'); if (spine) { spine.rotation.x = breathe * 0.04; spine.rotation.z = Math.sin(t * 0.6) * 0.035; }
-      const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.025;
-      const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.045;
-      const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.55) * 0.08;
-      const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.55) * 0.18; head.rotation.x = Math.sin(t * 0.42) * 0.07; head.rotation.z = Math.sin(t * 0.5) * 0.03; }
-      // arms: idle sway is the base pose (arms hang down, gentle sway)
-      const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
-      const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
-      let luaZ = 1.42 + Math.sin(t * 0.8) * 0.05, luaX = Math.sin(t * 0.9) * 0.05;
-      let ruaZ = -1.42 - Math.sin(t * 0.8 + 0.6) * 0.05, ruaX = Math.sin(t * 0.9 + 0.6) * 0.05;
-      const llaX = -0.16 + Math.sin(t * 0.9) * 0.05;
-      const rlaX = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05;
-      if (lUA) { lUA.rotation.z = luaZ; lUA.rotation.x = luaX; }
-      if (rUA) { rUA.rotation.z = ruaZ; rUA.rotation.x = ruaX; }
-      if (lLA) lLA.rotation.x = llaX;
-      if (rLA) rLA.rotation.x = rlaX;
+      if (mixer) {
+        // real VRM animation drives the whole body
+        mixer.update(dt);
+        vrm.scene.position.y = 0;
+      } else {
+        // fallback procedural idle (until the animation finishes loading, or if it fails)
+        const breathe = Math.sin(t * 1.5);
+        const spine = B('spine'); if (spine) { spine.rotation.x = breathe * 0.04; spine.rotation.z = Math.sin(t * 0.6) * 0.035; }
+        const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.025;
+        const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.045;
+        const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.55) * 0.08;
+        const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.55) * 0.18; head.rotation.x = Math.sin(t * 0.42) * 0.07; head.rotation.z = Math.sin(t * 0.5) * 0.03; }
+        const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
+        const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
+        if (lUA) { lUA.rotation.z = 1.42 + Math.sin(t * 0.8) * 0.05; lUA.rotation.x = Math.sin(t * 0.9) * 0.05; }
+        if (rUA) { rUA.rotation.z = -1.42 - Math.sin(t * 0.8 + 0.6) * 0.05; rUA.rotation.x = Math.sin(t * 0.9 + 0.6) * 0.05; }
+        if (lLA) lLA.rotation.x = -0.16 + Math.sin(t * 0.9) * 0.05;
+        if (rLA) rLA.rotation.x = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05;
+        vrm.scene.position.y = Math.sin(t * 1.5) * 0.02;
+      }
       vrm.scene.position.x = HOME_X;
-      vrm.scene.position.y = breathe * 0.02;
       vrm.scene.rotation.y = baseY;
 
       // blink
