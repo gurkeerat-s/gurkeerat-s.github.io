@@ -81,9 +81,6 @@ export function initCompanion() {
   let vrm = null, baseY = 0, t = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0;
-  // built-in VRM emotes (VRoid blendshapes): smile while she "talks", neutral otherwise
-  const EMOTES = ['happy', 'relaxed', 'happy', 'happy', 'relaxed'];
-  let emoteName = 'happy', emoteVal = 0, emoteTarget = 0;
   const HOME_X = 1.0;
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
 
@@ -154,24 +151,13 @@ export function initCompanion() {
         if (blinkPhase >= 0.14) { blinkPhase = 0; blinkTimer = 2 + Math.random() * 3; }
       }
 
-      // emote: smoothly ramp the current expression toward its target, then apply it
-      emoteVal += (emoteTarget - emoteVal) * Math.min(1, dt * 6);
-      vrm.expressionManager?.setValue(emoteName, Math.max(0, Math.min(1, emoteVal)));
-
       vrm.update(dt);
 
       // speech bubble: cycle lines (5.5s on, 4s off), follow her head on screen
       lineTimer -= dt;
       if (lineTimer <= 0) {
-        if (bubbleOn) { bubble.style.opacity = '0'; bubbleOn = false; lineTimer = 4; emoteTarget = 0; }
-        else {
-          vrm.expressionManager?.setValue(emoteName, 0);   // clear the previous emote
-          bubble.textContent = LINES[lineI % LINES.length];
-          emoteName = EMOTES[lineI % EMOTES.length];
-          emoteVal = 0; emoteTarget = 0.7;
-          lineI++;
-          bubble.style.opacity = '1'; bubbleOn = true; lineTimer = 5.5;
-        }
+        if (bubbleOn) { bubble.style.opacity = '0'; bubbleOn = false; lineTimer = 4; }
+        else { bubble.textContent = LINES[lineI++ % LINES.length]; bubble.style.opacity = '1'; bubbleOn = true; lineTimer = 5.5; }
       }
       const hn = B('head');
       if (hn) {
