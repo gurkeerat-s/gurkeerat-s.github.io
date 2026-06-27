@@ -108,24 +108,11 @@ export function initCompanion() {
     const dt = Math.min(clock.getDelta(), 0.05);
     if (vrm) {
       t += dt;
-      // wander: walk to an edge, pause, turn around
-      if (walking) {
-        posX += dir * SPEED * dt;
-        if (posX >= HOME_X + RANGE) { posX = HOME_X + RANGE; walking = false; pauseT = 2.5 + Math.random() * 2.5; }
-        if (posX <= HOME_X - RANGE) { posX = HOME_X - RANGE; walking = false; pauseT = 2.5 + Math.random() * 2.5; }
-      } else {
-        pauseT -= dt;
-        if (pauseT <= 0) { walking = true; dir *= -1; }
-      }
-      const moving = walking ? 1 : 0;
-      const ph = t * STEP;
-
-      // face direction of travel (¾ turn), face camera when paused
-      const targetTurn = walking ? (dir > 0 ? -0.35 : 0.35) : 0;
-      turn += (targetTurn - turn) * Math.min(1, dt * 4);
-      vrm.scene.rotation.y = baseY + turn;
-      vrm.scene.position.x = posX;
-      vrm.scene.position.y = moving * Math.abs(Math.sin(ph)) * 0.04; // step bob
+      // stand on the right and just idle — no walking
+      const moving = 0, ph = t;
+      vrm.scene.rotation.y = baseY;            // face the viewer
+      vrm.scene.position.x = HOME_X;
+      vrm.scene.position.y = Math.sin(t * 1.6) * 0.008; // tiny breathing bob
 
       // legs (arms-down handled below). Flip leg signs if she moonwalks.
       const lUL = B('leftUpperLeg'), rUL = B('rightUpperLeg');
@@ -138,13 +125,13 @@ export function initCompanion() {
       // arms down out of the T-pose, with a little walk swing.
       // (If her arms point UP instead of down, flip these two signs.)
       const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
-      if (lUA) { lUA.rotation.z = 1.2; lUA.rotation.x = moving * -Math.sin(ph) * 0.18; }
-      if (rUA) { rUA.rotation.z = -1.2; rUA.rotation.x = moving * Math.sin(ph) * 0.18; }
+      if (lUA) { lUA.rotation.z = 1.2; lUA.rotation.x = Math.sin(t * 0.9) * 0.05; }
+      if (rUA) { rUA.rotation.z = -1.2; rUA.rotation.x = Math.sin(t * 0.9 + 0.4) * 0.05; }
 
       // breathing + idle head sway (counter-rotate so face stays toward us)
       const spine = B('spine'); if (spine) spine.rotation.x = Math.sin(t * 1.6) * 0.015;
       const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.02; // gentle weight-shift
-      const head = B('head'); if (head) head.rotation.y = Math.sin(t * 0.5) * 0.12 - turn * 0.5;
+      const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.5) * 0.12; head.rotation.x = Math.sin(t * 0.4) * 0.04; }
       lookTarget.position.set(posX, 1.4, 3); lookTarget.updateMatrixWorld();
 
       // blink
