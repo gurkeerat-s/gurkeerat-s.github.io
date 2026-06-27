@@ -143,10 +143,17 @@ export function initCompanion() {
     if (vrm) {
       t += dt;
       if (mixer) {
-        // real VRM animation drives the whole body, with a rest pause between passes
+        // real VRM animation drives the body, with a gentle breathing rest between passes
         if (animState === 'play') {
           mixer.update(dt);
+          vrm.scene.position.y = 0;
         } else {
+          // resting: subtle breathing bob so she's alive, not a freeze-frame
+          const breathe = Math.sin(t * 1.5);
+          const spine = B('spine'); if (spine) spine.rotation.x = breathe * 0.03;
+          const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.02;
+          const head = B('head'); if (head) head.rotation.y = Math.sin(t * 0.5) * 0.05;
+          vrm.scene.position.y = breathe * 0.012;
           animHold -= dt;
           if (animHold <= 0) {
             action.reset();
@@ -156,7 +163,6 @@ export function initCompanion() {
             animState = 'play';
           }
         }
-        vrm.scene.position.y = 0;
       } else {
         // fallback procedural idle (until the animation finishes loading, or if it fails)
         const breathe = Math.sin(t * 1.5);
