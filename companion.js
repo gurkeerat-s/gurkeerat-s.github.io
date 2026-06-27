@@ -11,6 +11,15 @@ const LINES = [
   "he's hunting an AI/ML internship 👀",
   "fine-tuned voice models, LLM agents… the works",
   "wanna reach him? his email's at the bottom 💌",
+  "psst — that voice agent? he fine-tuned + self-hosts it 🎙️",
+  "Saleable's a whole suite of AI agents he shipped 🏠",
+  "he ships end-to-end: model → backend → frontend → deployed ⚡",
+  "cs · stats · math @ UofT, if you were wondering 🎓",
+  "Toronto-based, but totally down for remote too 🇨🇦",
+  "honestly he'll out-build the résumé — give him a shot 😤",
+  "i'm just a lil VRM he set loose on his site 😌",
+  "still here? he's genuinely worth a reply 💌",
+  "he builds AI agents… so yeah, i'm kind of the demo 😏",
 ];
 
 let started = false;

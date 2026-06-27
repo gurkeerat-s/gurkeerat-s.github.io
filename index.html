@@ -136,18 +136,18 @@
 <button id="summon-btn">✨ say hi 🌸</button>
 <script>
   const sb = document.getElementById('summon-btn');
-  sb.addEventListener('click', async () => {
-    sb.textContent = 'summoning… ✨';
+  async function summon() {
+    sb.style.display = 'none';
     try {
-      const m = await import('./companion.js?v=13');
+      const m = await import('./companion.js?v=14');
       m.initCompanion();
-      sb.style.display = 'none';
-      sb.textContent = '✨ say hi 🌸';
     } catch (e) {
-      sb.textContent = '😣 try again';
       console.error(e);
+      sb.style.display = ''; sb.textContent = '😣 try again';
     }
-  });
+  }
+  sb.addEventListener('click', summon);                       // re-summon after hiding
+  window.addEventListener('load', () => setTimeout(summon, 500)); // always-on: auto-load after paint
 </script>
 </body>
 </html>
