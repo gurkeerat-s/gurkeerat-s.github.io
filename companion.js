@@ -72,8 +72,8 @@ export function initCompanion() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
-  camera.position.set(0, 0.85, 3.7);  // pulled back + lower so full body (incl. shoes) fits
-  camera.lookAt(0, 0.85, 0);
+  camera.position.set(0, 0.90, 3.5);  // full body in frame, feet near the bottom edge
+  camera.lookAt(0, 0.90, 0);
   scene.add(new THREE.AmbientLight(0xffffff, 0.65));
   const keyL = new THREE.DirectionalLight(0xfff5ec, 1.0); keyL.position.set(2, 3, 2); scene.add(keyL);
   const fillL = new THREE.DirectionalLight(0xdce4ff, 0.4); fillL.position.set(-2, 1, 1.5); scene.add(fillL);
@@ -91,6 +91,19 @@ export function initCompanion() {
   let bubbleOn = false, lineTimer = 0.6, lineI = 0;
   const HOME_X = 1.0;
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
+
+  // soft contact shadow so she's grounded, not floating
+  const shCanvas = document.createElement('canvas'); shCanvas.width = shCanvas.height = 128;
+  const shCtx = shCanvas.getContext('2d');
+  const grd = shCtx.createRadialGradient(64, 64, 3, 64, 64, 60);
+  grd.addColorStop(0, 'rgba(0,0,0,0.33)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  shCtx.fillStyle = grd; shCtx.fillRect(0, 0, 128, 128);
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.95, 0.55),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shCanvas), transparent: true, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.set(HOME_X, 0.01, 0.06);
+  scene.add(shadow);
 
   const loader = new GLTFLoader();
   loader.register((p) => new VRMLoaderPlugin(p));
