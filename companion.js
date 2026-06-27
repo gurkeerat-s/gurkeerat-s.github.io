@@ -84,7 +84,6 @@ export function initCompanion() {
   // built-in VRM emotes (VRoid blendshapes): smile while she "talks", neutral otherwise
   const EMOTES = ['happy', 'relaxed', 'happy', 'happy', 'relaxed'];
   let emoteName = 'happy', emoteVal = 0, emoteTarget = 0;
-  // hand-authored gestures blended over the idle (no external clips -> no teleporting)
   const HOME_X = 1.0;
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
 
