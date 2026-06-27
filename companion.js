@@ -79,7 +79,8 @@ export function initCompanion() {
   }
   resize(); window.addEventListener('resize', resize);
 
-  let vrm = null, baseY = 0, t = 0, mixer = null;
+  let vrm = null, baseY = 0, t = 0, mixer = null, action = null;
+  let animState = 'play', animHold = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0;
   const HOME_X = 1.0;
@@ -115,10 +116,18 @@ export function initCompanion() {
       const va = ag.userData.vrmAnimations?.[0];
       if (!va || !vrm) return;
       mixer = new THREE.AnimationMixer(vrm.scene);
-      const action = mixer.clipAction(createVRMAnimationClip(va, vrm));
-      action.setLoop(THREE.LoopPingPong);   // forward then reverse -> no hard-cut chop on loop
-      action.timeScale = 0.7;               // a touch slower / calmer
-      action.play();
+      action = mixer.clipAction(createVRMAnimationClip(va, vrm));
+      action.timeScale = 0.7;                          // a touch slower / calmer
+      const playPass = () => {                         // one forward + reverse pass, then stop at rest
+        action.reset();
+        action.setLoop(THREE.LoopPingPong, 2);
+        action.clampWhenFinished = true;
+        action.play();
+        animState = 'play';
+      };
+      // when the pass finishes, rest for a couple seconds before going again
+      mixer.addEventListener('finished', () => { animState = 'hold'; animHold = 2.5 + Math.random() * 1.5; });
+      playPass();
     }, undefined, (err) => console.warn('[companion] animation load failed, using procedural idle', err));
   }, undefined, (e) => {
     console.error('[companion] avatar load failed', e);
@@ -134,8 +143,19 @@ export function initCompanion() {
     if (vrm) {
       t += dt;
       if (mixer) {
-        // real VRM animation drives the whole body
-        mixer.update(dt);
+        // real VRM animation drives the whole body, with a rest pause between passes
+        if (animState === 'play') {
+          mixer.update(dt);
+        } else {
+          animHold -= dt;
+          if (animHold <= 0) {
+            action.reset();
+            action.setLoop(THREE.LoopPingPong, 2);
+            action.clampWhenFinished = true;
+            action.play();
+            animState = 'play';
+          }
+        }
         vrm.scene.position.y = 0;
       } else {
         // fallback procedural idle (until the animation finishes loading, or if it fails)
