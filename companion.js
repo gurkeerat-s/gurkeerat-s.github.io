@@ -81,8 +81,8 @@ export function initCompanion() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
-  camera.position.set(0, 1.38, 1.45);
-  camera.lookAt(0, 1.32, 0);
+  camera.position.set(0, 1.40, 1.12);
+  camera.lookAt(0, 1.36, 0);
   scene.add(new THREE.AmbientLight(0xffffff, 0.5));
   const key = new THREE.DirectionalLight(0xfff5ec, 1.0); key.position.set(1.5, 2, 2); scene.add(key);
   const fill = new THREE.DirectionalLight(0xdcd8f0, 0.35); fill.position.set(-1.5, 1, 1); scene.add(fill);
