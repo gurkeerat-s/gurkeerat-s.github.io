@@ -112,7 +112,7 @@ export function initCompanion() {
       const moving = 0, ph = t;
       vrm.scene.rotation.y = baseY;            // face the viewer
       vrm.scene.position.x = HOME_X;
-      vrm.scene.position.y = Math.sin(t * 1.6) * 0.008; // tiny breathing bob
+      vrm.scene.position.y = Math.sin(t * 1.5) * 0.022; // breathing bob
 
       // legs (arms-down handled below). Flip leg signs if she moonwalks.
       const lUL = B('leftUpperLeg'), rUL = B('rightUpperLeg');
@@ -125,13 +125,18 @@ export function initCompanion() {
       // arms down out of the T-pose, with a little walk swing.
       // (If her arms point UP instead of down, flip these two signs.)
       const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
-      if (lUA) { lUA.rotation.z = 1.2; lUA.rotation.x = Math.sin(t * 0.9) * 0.05; }
-      if (rUA) { rUA.rotation.z = -1.2; rUA.rotation.x = Math.sin(t * 0.9 + 0.4) * 0.05; }
+      if (lUA) { lUA.rotation.z = 1.18 + Math.sin(t * 0.8) * 0.10; lUA.rotation.x = Math.sin(t * 0.9) * 0.14; }
+      if (rUA) { rUA.rotation.z = -1.18 - Math.sin(t * 0.8 + 0.6) * 0.10; rUA.rotation.x = Math.sin(t * 0.9 + 0.6) * 0.14; }
+      const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
+      if (lLA) lLA.rotation.x = -0.12 + Math.sin(t * 0.9) * 0.09;
+      if (rLA) rLA.rotation.x = -0.12 + Math.sin(t * 0.9 + 0.6) * 0.09;
 
       // breathing + idle head sway (counter-rotate so face stays toward us)
-      const spine = B('spine'); if (spine) spine.rotation.x = Math.sin(t * 1.6) * 0.015;
-      const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.02; // gentle weight-shift
-      const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.5) * 0.12; head.rotation.x = Math.sin(t * 0.4) * 0.04; }
+      const spine = B('spine'); if (spine) { spine.rotation.x = Math.sin(t * 1.5) * 0.04; spine.rotation.z = Math.sin(t * 0.6) * 0.035; }
+      const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = Math.sin(t * 1.5) * 0.025;
+      const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.045; // weight-shift
+      const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.55) * 0.08;
+      const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.55) * 0.18; head.rotation.x = Math.sin(t * 0.42) * 0.07; head.rotation.z = Math.sin(t * 0.5) * 0.03; }
       lookTarget.position.set(posX, 1.4, 3); lookTarget.updateMatrixWorld();
 
       // blink
