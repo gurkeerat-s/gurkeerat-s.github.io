@@ -23,7 +23,8 @@
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     line-height:1.6; font-size:16px; transition:background-color .2s ease,color .2s ease;
   }
-  .wrap{max-width:720px; margin:0 auto; padding:0 24px}
+  .wrap{max-width:720px; margin:0 auto; padding:0 24px; transition:margin .4s ease}
+  html.cmp-active .wrap{margin-left:clamp(24px,5vw,110px); margin-right:auto}
   a{color:inherit}
   nav{display:flex; align-items:center; gap:22px; padding:26px 0; font-size:14px}
   nav a{color:var(--muted); text-decoration:none}
@@ -138,7 +139,7 @@
   sb.addEventListener('click', async () => {
     sb.textContent = 'summoning… ✨';
     try {
-      const m = await import('./companion.js?v=7');
+      const m = await import('./companion.js?v=8');
       m.initCompanion();
       sb.style.display = 'none';
       sb.textContent = '✨ say hi 🌸';

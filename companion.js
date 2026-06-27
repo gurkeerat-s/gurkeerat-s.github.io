@@ -41,6 +41,7 @@ export function initCompanion() {
   if (started) return;
   started = true;
   injectStyles();
+  document.documentElement.classList.add('cmp-active'); // shifts page content left to make room
 
   const stage = document.createElement('div');
   stage.id = 'cmp-stage';
@@ -77,10 +78,10 @@ export function initCompanion() {
 
   const lookTarget = new THREE.Object3D(); scene.add(lookTarget);
   let vrm = null, baseY = 0, t = 0;
-  let posX = 0, dir = 1, walking = true, pauseT = 0, turn = 0;
+  let posX = 0.85, dir = 1, walking = false, pauseT = 1.5, turn = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0;
-  const RANGE = 1.25, SPEED = 0.42, STEP = 7.0;
+  const HOME_X = 0.85, RANGE = 0.22, SPEED = 0.2, STEP = 6.0; // dock on the right, drift gently
 
   const loader = new GLTFLoader();
   loader.register((p) => new VRMLoaderPlugin(p));
@@ -110,7 +111,8 @@ export function initCompanion() {
       // wander: walk to an edge, pause, turn around
       if (walking) {
         posX += dir * SPEED * dt;
-        if (Math.abs(posX) >= RANGE) { posX = Math.sign(posX) * RANGE; walking = false; pauseT = 1.3 + Math.random(); }
+        if (posX >= HOME_X + RANGE) { posX = HOME_X + RANGE; walking = false; pauseT = 2.5 + Math.random() * 2.5; }
+        if (posX <= HOME_X - RANGE) { posX = HOME_X - RANGE; walking = false; pauseT = 2.5 + Math.random() * 2.5; }
       } else {
         pauseT -= dt;
         if (pauseT <= 0) { walking = true; dir *= -1; }
@@ -119,7 +121,7 @@ export function initCompanion() {
       const ph = t * STEP;
 
       // face direction of travel (¾ turn), face camera when paused
-      const targetTurn = walking ? (dir > 0 ? -0.7 : 0.7) : 0;
+      const targetTurn = walking ? (dir > 0 ? -0.35 : 0.35) : 0;
       turn += (targetTurn - turn) * Math.min(1, dt * 4);
       vrm.scene.rotation.y = baseY + turn;
       vrm.scene.position.x = posX;
@@ -141,6 +143,7 @@ export function initCompanion() {
 
       // breathing + idle head sway (counter-rotate so face stays toward us)
       const spine = B('spine'); if (spine) spine.rotation.x = Math.sin(t * 1.6) * 0.015;
+      const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.02; // gentle weight-shift
       const head = B('head'); if (head) head.rotation.y = Math.sin(t * 0.5) * 0.12 - turn * 0.5;
       lookTarget.position.set(posX, 1.4, 3); lookTarget.updateMatrixWorld();
 
@@ -175,6 +178,7 @@ export function initCompanion() {
 
   close.onclick = () => {
     started = false;
+    document.documentElement.classList.remove('cmp-active');
     window.removeEventListener('resize', resize);
     renderer.dispose();
     stage.remove(); close.remove(); credit.remove();
