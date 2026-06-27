@@ -85,8 +85,7 @@ export function initCompanion() {
   const EMOTES = ['happy', 'relaxed', 'happy', 'happy', 'relaxed'];
   let emoteName = 'happy', emoteVal = 0, emoteTarget = 0;
   // hand-authored gestures blended over the idle (no external clips -> no teleporting)
-  const GESTURES = ['wave', 'armcross'];
-  let gestureTimer = 7 + Math.random() * 5, gesture = null, gestureI = 0;
+  let gestureTimer = 7 + Math.random() * 5, gesture = null;
   const HOME_X = 1.0;
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
 
@@ -140,29 +139,19 @@ export function initCompanion() {
       let llaX = -0.16 + Math.sin(t * 0.9) * 0.05, llaZ = 0;
       let rlaX = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05, rlaZ = 0;
 
-      // gesture scheduler: occasionally blend a wave or arm-cross over the idle
+      // gesture scheduler: occasionally blend a friendly wave over the idle
       gestureTimer -= dt;
-      if (!gesture && gestureTimer <= 0) {
-        const name = GESTURES[gestureI++ % GESTURES.length];
-        gesture = { name, time: 0, dur: name === 'wave' ? 2.8 : 4.2 };
-      }
+      if (!gesture && gestureTimer <= 0) gesture = { time: 0, dur: 3.0 };
       if (gesture) {
         gesture.time += dt;
-        // ease-in over 0.6s, ease-out over the last 0.6s -> 0..1..0, never pops
-        const e = Math.max(0, Math.min(gesture.time / 0.6, 1) * Math.min((gesture.dur - gesture.time) / 0.6, 1));
+        // ease-in over 0.7s, ease-out over the last 0.7s -> 0..1..0, never pops
+        const e = Math.max(0, Math.min(gesture.time / 0.7, 1) * Math.min((gesture.dur - gesture.time) / 0.7, 1));
         const bl = (cur, tgt) => cur + (tgt - cur) * e;
-        if (gesture.name === 'wave') {
-          const w = Math.sin(gesture.time * 8) * 0.42;   // hand swings side to side
-          ruaZ = bl(ruaZ, -0.30); ruaX = bl(ruaX, 0.10);  // raise right arm up/out
-          rlaX = bl(rlaX, -1.25);                          // bend elbow, hand up
-          rlaZ = bl(rlaZ, w);
-        } else {                                           // armcross: fold forearms in front
-          luaZ = bl(luaZ, 0.92); ruaZ = bl(ruaZ, -0.92);
-          luaX = bl(luaX, 0.16); ruaX = bl(ruaX, 0.16);
-          llaX = bl(llaX, -1.48); rlaX = bl(rlaX, -1.48);
-          llaZ = bl(llaZ, -0.38); rlaZ = bl(rlaZ, 0.38);
-        }
-        if (gesture.time >= gesture.dur) { gesture = null; gestureTimer = 13 + Math.random() * 9; }
+        const w = Math.sin(gesture.time * 6.5) * 0.20;   // arm swings side to side
+        ruaZ = bl(ruaZ, 0.55 + w);                       // raise right arm UP and out
+        ruaX = bl(ruaX, 0.15);                           // a touch forward
+        rlaX = bl(rlaX, -0.30);                          // slight, natural elbow bend
+        if (gesture.time >= gesture.dur) { gesture = null; gestureTimer = 12 + Math.random() * 8; }
       }
       if (lUA) { lUA.rotation.z = luaZ; lUA.rotation.x = luaX; }
       if (rUA) { rUA.rotation.z = ruaZ; rUA.rotation.x = ruaX; }
