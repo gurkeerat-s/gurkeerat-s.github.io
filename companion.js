@@ -84,6 +84,9 @@ export function initCompanion() {
   // built-in VRM emotes (VRoid blendshapes): smile while she "talks", neutral otherwise
   const EMOTES = ['happy', 'relaxed', 'happy', 'happy', 'relaxed'];
   let emoteName = 'happy', emoteVal = 0, emoteTarget = 0;
+  // hand-authored gestures blended over the idle (no external clips -> no teleporting)
+  const GESTURES = ['wave', 'armcross'];
+  let gestureTimer = 7 + Math.random() * 5, gesture = null, gestureI = 0;
   const HOME_X = 1.0;
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
 
@@ -129,12 +132,42 @@ export function initCompanion() {
       const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.045;
       const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.55) * 0.08;
       const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.55) * 0.18; head.rotation.x = Math.sin(t * 0.42) * 0.07; head.rotation.z = Math.sin(t * 0.5) * 0.03; }
+      // arms: idle sway is the base pose (arms hang down, gentle sway)
       const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
-      if (lUA) { lUA.rotation.z = 1.18 + Math.sin(t * 0.8) * 0.10; lUA.rotation.x = Math.sin(t * 0.9) * 0.13; }
-      if (rUA) { rUA.rotation.z = -1.18 - Math.sin(t * 0.8 + 0.6) * 0.10; rUA.rotation.x = Math.sin(t * 0.9 + 0.6) * 0.13; }
       const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
-      if (lLA) lLA.rotation.x = -0.12 + Math.sin(t * 0.9) * 0.08;
-      if (rLA) rLA.rotation.x = -0.12 + Math.sin(t * 0.9 + 0.6) * 0.08;
+      let luaZ = 1.18 + Math.sin(t * 0.8) * 0.10, luaX = Math.sin(t * 0.9) * 0.13;
+      let ruaZ = -1.18 - Math.sin(t * 0.8 + 0.6) * 0.10, ruaX = Math.sin(t * 0.9 + 0.6) * 0.13;
+      let llaX = -0.12 + Math.sin(t * 0.9) * 0.08, llaZ = 0;
+      let rlaX = -0.12 + Math.sin(t * 0.9 + 0.6) * 0.08, rlaZ = 0;
+
+      // gesture scheduler: occasionally blend a wave or arm-cross over the idle
+      gestureTimer -= dt;
+      if (!gesture && gestureTimer <= 0) {
+        const name = GESTURES[gestureI++ % GESTURES.length];
+        gesture = { name, time: 0, dur: name === 'wave' ? 2.8 : 4.2 };
+      }
+      if (gesture) {
+        gesture.time += dt;
+        // ease-in over 0.6s, ease-out over the last 0.6s -> 0..1..0, never pops
+        const e = Math.max(0, Math.min(gesture.time / 0.6, 1) * Math.min((gesture.dur - gesture.time) / 0.6, 1));
+        const bl = (cur, tgt) => cur + (tgt - cur) * e;
+        if (gesture.name === 'wave') {
+          const w = Math.sin(gesture.time * 8) * 0.42;   // hand swings side to side
+          ruaZ = bl(ruaZ, -0.30); ruaX = bl(ruaX, 0.10);  // raise right arm up/out
+          rlaX = bl(rlaX, -1.25);                          // bend elbow, hand up
+          rlaZ = bl(rlaZ, w);
+        } else {                                           // armcross: fold forearms in front
+          luaZ = bl(luaZ, 0.92); ruaZ = bl(ruaZ, -0.92);
+          luaX = bl(luaX, 0.16); ruaX = bl(ruaX, 0.16);
+          llaX = bl(llaX, -1.48); rlaX = bl(rlaX, -1.48);
+          llaZ = bl(llaZ, -0.38); rlaZ = bl(rlaZ, 0.38);
+        }
+        if (gesture.time >= gesture.dur) { gesture = null; gestureTimer = 13 + Math.random() * 9; }
+      }
+      if (lUA) { lUA.rotation.z = luaZ; lUA.rotation.x = luaX; }
+      if (rUA) { rUA.rotation.z = ruaZ; rUA.rotation.x = ruaX; }
+      if (lLA) { lLA.rotation.x = llaX; lLA.rotation.z = llaZ; }
+      if (rLA) { rLA.rotation.x = rlaX; rLA.rotation.z = rlaZ; }
       vrm.scene.position.x = HOME_X;
       vrm.scene.position.y = breathe * 0.02;
       vrm.scene.rotation.y = baseY;
