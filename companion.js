@@ -109,7 +109,10 @@ export function initCompanion() {
         } catch (e) { console.warn('[companion] vrma', name, e); return null; }
       }));
       actions = clips.filter(Boolean).map((c) => {
-        const a = mixer.clipAction(c); a.setLoop(THREE.LoopRepeat); return a;
+        const a = mixer.clipAction(c);
+        a.setLoop(THREE.LoopPingPong); // forward then reverse — no hard snap at the loop point
+        a.timeScale = 0.85;            // a touch slower = calmer
+        return a;
       });
       if (actions.length) { actions[0].play(); cur = 0; animTimer = 8; }
       else { mixer = null; console.warn('[companion] no animations loaded, using procedural idle'); }
