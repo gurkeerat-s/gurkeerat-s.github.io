@@ -72,8 +72,8 @@ export function initCompanion() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
-  camera.position.set(0, 1.0, 3.0);
-  camera.lookAt(0, 1.0, 0);
+  camera.position.set(0, 0.85, 3.7);  // pulled back + lower so full body (incl. shoes) fits
+  camera.lookAt(0, 0.85, 0);
   scene.add(new THREE.AmbientLight(0xffffff, 0.65));
   const keyL = new THREE.DirectionalLight(0xfff5ec, 1.0); keyL.position.set(2, 3, 2); scene.add(keyL);
   const fillL = new THREE.DirectionalLight(0xdce4ff, 0.4); fillL.position.set(-2, 1, 1.5); scene.add(fillL);
@@ -89,7 +89,7 @@ export function initCompanion() {
   let vrm = null, baseY = 0, t = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0;
-  const HOME_X = 0.85;
+  const HOME_X = 1.0;
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
 
   const loader = new GLTFLoader();
