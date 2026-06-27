@@ -47,6 +47,13 @@
   .links a{text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px}
   .links a:hover{border-color:var(--accent); color:var(--accent)}
   .muted-note{font-size:13px; color:var(--muted); font-style:italic}
+  .exp{padding:18px 0; border-top:1px solid var(--line)}
+  .exp-head{display:flex; justify-content:space-between; gap:10px 16px; align-items:baseline; flex-wrap:wrap}
+  .exp-role{font-weight:650; font-size:16px}
+  .exp-co{color:var(--muted)}
+  .exp-dates{color:var(--muted); font-size:13px; white-space:nowrap}
+  .exp ul{margin:8px 0 0; padding-left:18px}
+  .exp li{margin:3px 0}
   footer{border-top:1px solid var(--line); margin-top:40px; padding:26px 0 60px; color:var(--muted); font-size:14px}
   footer a{text-decoration:none; border-bottom:1px solid var(--line)}
   footer a:hover{color:var(--accent)}
@@ -62,6 +69,7 @@
 
   <nav>
     <a href="#work">work</a>
+    <a href="#experience">experience</a>
     <a href="#about">about</a>
     <a href="mailto:gurkeeratsappal@gmail.com">contact</a>
     <span class="spacer"></span>
@@ -111,6 +119,51 @@
       like a normal tip jar, with the crypto hidden underneath.</p>
     <div class="tech">Next.js 14 · TypeScript · Privy (embedded wallets) · wagmi / viem · Base · Supabase</div>
     <div class="links"><a href="https://plinky.to" target="_blank" rel="noopener">live → plinky.to</a></div>
+  </div>
+
+  <div class="section-label" id="experience">experience</div>
+
+  <div class="exp">
+    <div class="exp-head">
+      <div><span class="exp-role">AI &amp; Automation Developer</span><span class="exp-co"> · SaleableRE (Condoville)</span></div>
+      <div class="exp-dates">Apr 2026 – Aug 2026</div>
+    </div>
+    <ul>
+      <li>Built an automation suite that auto-fills listing forms and contracts across 600+ listings, saving agents 5+ hours per transaction.</li>
+      <li>Added a vision-based extraction fallback that lifted form-fill accuracy above 95%, and built client-intake AI assistants used by 7+ agents.</li>
+    </ul>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head">
+      <div><span class="exp-role">AI Lead Generation Specialist</span><span class="exp-co"> · Urai AI Corp (via Riipen)</span></div>
+      <div class="exp-dates">Jan 2026 – Apr 2026</div>
+    </div>
+    <ul>
+      <li>Built custom AI systems to source, qualify, and segment targeted prospect lists by industry and defined business constraints.</li>
+    </ul>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head">
+      <div><span class="exp-role">Full-Stack AI Developer</span><span class="exp-co"> · ChattelBot</span></div>
+      <div class="exp-dates">Mar 2025 – Jan 2026</div>
+    </div>
+    <ul>
+      <li>Shipped a productized AI voice + chat receptionist to 5+ local businesses, cutting missed-inquiry rates by 45%.</li>
+      <li>Built the real-time voice stack on LiveKit + GPT and a LangChain RAG chatbot, behind a Next.js / Tailwind front-end on Vercel.</li>
+    </ul>
+  </div>
+
+  <div class="exp">
+    <div class="exp-head">
+      <div><span class="exp-role">AI Prompt Engineer &amp; Model Evaluator</span><span class="exp-co"> · Outlier AI (Scale AI)</span></div>
+      <div class="exp-dates">Feb 2025 – Jan 2026</div>
+    </div>
+    <ul>
+      <li>Evaluated 200+ LLM outputs weekly across multimodal tasks, flagging hallucinations, tool misuse, and safety regressions.</li>
+      <li>Built RLHF preference data, wrote gold-standard reference answers, and red-teamed models for jailbreaks and policy violations.</li>
+    </ul>
   </div>
 
   <div class="section-label" id="about">about</div>
