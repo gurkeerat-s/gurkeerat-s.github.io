@@ -65,13 +65,14 @@ export function initCompanion() {
   injectStyles();
   const { panel, canvas, bubble, pills, closeBtn } = buildUI();
 
-  const mouse = { x: 0, y: 0 };
+  const mouse = { x: 0, y: 0, idle: 99 };
   panel.addEventListener('pointermove', (e) => {
     const r = panel.getBoundingClientRect();
     mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
     mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    mouse.idle = 0;
   });
-  panel.addEventListener('pointerleave', () => { mouse.x = 0; mouse.y = 0; });
+  panel.addEventListener('pointerleave', () => { mouse.x = 0; mouse.y = 0; mouse.idle = 99; });
 
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -112,20 +113,47 @@ export function initCompanion() {
   });
 
   const clock = new THREE.Clock();
+  let headYaw = 0, headPitch = 0, blinkTimer = 1.5 + Math.random() * 2, blinkPhase = 0;
   function loop() {
     if (!started) return;
     requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.05);
     if (vrm) {
       t += dt;
-      if (vrm.expressionManager) {
-        const c = t % 4.5;
-        vrm.expressionManager.setValue('blink', (c > 4.3 && c < 4.4) ? 1 : 0);
-      }
-      const chest = vrm.humanoid?.getNormalizedBoneNode('chest');
-      if (chest) chest.rotation.x = Math.sin(t * 1.3) * 0.012;
-      lookTarget.position.set(mouse.x * 0.5, 1.35 + mouse.y * 0.3, 1.0);
+      mouse.idle += dt;
+      const h = vrm.humanoid;
+      // breathing — spine + chest rise and fall
+      const breathe = Math.sin(t * 1.7);
+      const spine = h?.getNormalizedBoneNode('spine');
+      if (spine) spine.rotation.x = breathe * 0.022;
+      const chest = h?.getNormalizedBoneNode('chest') || h?.getNormalizedBoneNode('upperChest');
+      if (chest) chest.rotation.x = breathe * 0.018;
+      // slow weight-shift sway
+      const hips = h?.getNormalizedBoneNode('hips');
+      if (hips) hips.rotation.z = Math.sin(t * 0.6) * 0.02;
+      // head: track cursor if recently moved, else gentle idle look-around (no mouse needed)
+      const active = mouse.idle < 1.6;
+      const tgtYaw = active ? mouse.x * 0.42 : Math.sin(t * 0.45) * 0.20;
+      const tgtPitch = active ? -mouse.y * 0.26 : Math.sin(t * 0.33 + 1) * 0.07;
+      headYaw += (tgtYaw - headYaw) * Math.min(1, dt * 3.5);
+      headPitch += (tgtPitch - headPitch) * Math.min(1, dt * 3.5);
+      const neck = h?.getNormalizedBoneNode('neck');
+      const head = h?.getNormalizedBoneNode('head');
+      if (neck) { neck.rotation.y = headYaw * 0.45; neck.rotation.x = headPitch * 0.45; }
+      if (head) { head.rotation.y = headYaw * 0.55; head.rotation.x = headPitch * 0.55; }
+      // eyes follow roughly the same direction
+      lookTarget.position.set(headYaw * 2.5, 1.45 + headPitch * 2.0, 3.0);
       lookTarget.updateMatrixWorld();
+      // natural, randomly-timed blink
+      blinkTimer -= dt;
+      if (blinkTimer <= 0 && blinkPhase === 0) blinkPhase = 0.0001;
+      if (blinkPhase > 0) {
+        blinkPhase += dt;
+        const v = blinkPhase < 0.07 ? blinkPhase / 0.07
+                : blinkPhase < 0.14 ? 1 - (blinkPhase - 0.07) / 0.07 : 0;
+        vrm.expressionManager?.setValue('blink', Math.max(0, Math.min(1, v)));
+        if (blinkPhase >= 0.14) { blinkPhase = 0; blinkTimer = 1.8 + Math.random() * 3; }
+      }
       vrm.update(dt);
     }
     renderer.render(scene, camera);
