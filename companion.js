@@ -85,7 +85,6 @@ export function initCompanion() {
   const EMOTES = ['happy', 'relaxed', 'happy', 'happy', 'relaxed'];
   let emoteName = 'happy', emoteVal = 0, emoteTarget = 0;
   // hand-authored gestures blended over the idle (no external clips -> no teleporting)
-  let gestureTimer = 7 + Math.random() * 5, gesture = null;
   const HOME_X = 1.0;
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
 
@@ -136,27 +135,12 @@ export function initCompanion() {
       const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
       let luaZ = 1.42 + Math.sin(t * 0.8) * 0.05, luaX = Math.sin(t * 0.9) * 0.05;
       let ruaZ = -1.42 - Math.sin(t * 0.8 + 0.6) * 0.05, ruaX = Math.sin(t * 0.9 + 0.6) * 0.05;
-      let llaX = -0.16 + Math.sin(t * 0.9) * 0.05, llaZ = 0;
-      let rlaX = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05, rlaZ = 0;
-
-      // gesture scheduler: occasionally blend a friendly wave over the idle
-      gestureTimer -= dt;
-      if (!gesture && gestureTimer <= 0) gesture = { time: 0, dur: 3.0 };
-      if (gesture) {
-        gesture.time += dt;
-        // ease-in over 0.7s, ease-out over the last 0.7s -> 0..1..0, never pops
-        const e = Math.max(0, Math.min(gesture.time / 0.7, 1) * Math.min((gesture.dur - gesture.time) / 0.7, 1));
-        const bl = (cur, tgt) => cur + (tgt - cur) * e;
-        const w = Math.sin(gesture.time * 6.5) * 0.20;   // arm swings side to side
-        ruaZ = bl(ruaZ, 0.55 + w);                       // raise right arm UP and out
-        ruaX = bl(ruaX, 0.15);                           // a touch forward
-        rlaX = bl(rlaX, -0.30);                          // slight, natural elbow bend
-        if (gesture.time >= gesture.dur) { gesture = null; gestureTimer = 12 + Math.random() * 8; }
-      }
+      const llaX = -0.16 + Math.sin(t * 0.9) * 0.05;
+      const rlaX = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05;
       if (lUA) { lUA.rotation.z = luaZ; lUA.rotation.x = luaX; }
       if (rUA) { rUA.rotation.z = ruaZ; rUA.rotation.x = ruaX; }
-      if (lLA) { lLA.rotation.x = llaX; lLA.rotation.z = llaZ; }
-      if (rLA) { rLA.rotation.x = rlaX; rLA.rotation.z = rlaZ; }
+      if (lLA) lLA.rotation.x = llaX;
+      if (rLA) rLA.rotation.x = rlaX;
       vrm.scene.position.x = HOME_X;
       vrm.scene.position.y = breathe * 0.02;
       vrm.scene.rotation.y = baseY;
