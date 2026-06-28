@@ -126,7 +126,7 @@ export function initCompanion() {
         animState = 'play';
       };
       // when the pass finishes, rest for a couple seconds before going again
-      mixer.addEventListener('finished', () => { animState = 'hold'; animHold = 2.5 + Math.random() * 1.5; });
+      mixer.addEventListener('finished', () => { animState = 'hold'; animHold = 1.3 + Math.random() * 1.0; });
       playPass();
     }, undefined, (err) => console.warn('[companion] animation load failed, using procedural idle', err));
   }, undefined, (e) => {
@@ -149,13 +149,13 @@ export function initCompanion() {
           vrm.scene.position.y = 0;
         } else {
           // resting: a clearly visible breathing + weight-shift idle (not a freeze-frame)
-          const breathe = Math.sin(t * 1.6);
-          const spine = B('spine'); if (spine) { spine.rotation.x = breathe * 0.06; spine.rotation.z = Math.sin(t * 0.7) * 0.05; }
-          const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.035;
-          const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.8) * 0.05;
-          const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.6) * 0.10;
-          const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.6) * 0.16; head.rotation.x = Math.sin(t * 0.45) * 0.06; }
-          vrm.scene.position.y = breathe * 0.025;
+          const breathe = Math.sin(t * 1.7);
+          const spine = B('spine'); if (spine) { spine.rotation.x = breathe * 0.07; spine.rotation.z = Math.sin(t * 0.8) * 0.08; }
+          const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.04;
+          const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.8) * 0.07;
+          const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.7) * 0.13;
+          const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.7) * 0.24; head.rotation.x = Math.sin(t * 0.5) * 0.08; }
+          vrm.scene.position.y = breathe * 0.03;
           animHold -= dt;
           if (animHold <= 0) {
             action.reset();
