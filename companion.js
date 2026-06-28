@@ -79,6 +79,7 @@ function injectStyles() {
     box-shadow:0 6px 20px rgba(0,0,0,.12)}
   #cmp-chat input::placeholder{color:var(--muted)}
   #cmp-chat input:focus{border-color:var(--accent)}
+  @media (max-width:700px){ #cmp-bubble{max-width:74vw} }
   `;
   document.head.appendChild(s);
 }
@@ -121,9 +122,9 @@ export function initCompanion() {
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    if (w < 700) {                       // narrow / portrait: center her + pull back so she fits on-screen
-      HOME_X = 0;
-      camera.position.set(0, 1.0, 5.0);
+    if (w < 700) {                       // narrow / portrait: smaller + nudged right so her speech bubble has room on the left
+      HOME_X = 0.55;
+      camera.position.set(0, 1.0, 6.8);
       camera.lookAt(0, 1.0, 0);
     } else {                             // desktop: docked to the right
       HOME_X = 1.0;
