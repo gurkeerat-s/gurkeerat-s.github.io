@@ -6,28 +6,28 @@ import { GLTFLoader } from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/GL
 import { VRMLoaderPlugin, VRMUtils } from 'https://esm.sh/@pixiv/three-vrm@3.4.0?deps=three@0.170.0';
 
 const LINES = [
-  "hi! i'm gurkeerat's lil AI companion 🌸",
-  "his projects are up there — scroll up 👆",
-  "he's hunting an AI/ML internship 👀",
-  "fine-tuned voice models, LLM agents… the works",
+  "hi! i'm gurkeerat's AI companion 🌸",
+  "his projects are up there, scroll up 👆",
+  "he's after an AI/ML internship 👀",
+  "fine-tuned voice models, LLM agents, the works",
   "wanna reach him? his email's at the bottom 💌",
-  "psst — that voice agent? he fine-tuned + self-hosts it 🎙️",
+  "that voice agent? he fine-tuned and self-hosts it 🎙️",
   "Saleable's a whole suite of AI agents he shipped 🏠",
   "he ships end-to-end: model → backend → frontend → deployed ⚡",
   "cs · stats · math @ UofT, if you were wondering 🎓",
-  "Toronto-based, but totally down for remote too 🇨🇦",
-  "honestly he'll out-build the résumé — give him a shot 😤",
-  "i'm just a lil VRM he set loose on his site 😌",
+  "Toronto-based, but happy to work remote too 🇨🇦",
+  "honestly he'll out-build the résumé, give him a shot 😤",
+  "i'm the AI companion he built for his site 😌",
   "still here? he's genuinely worth a reply 💌",
-  "he builds AI agents… so yeah, i'm kind of the demo 😏",
-  "psst — type below to ask me anything about him 💬",
+  "he builds AI agents, so yeah, i'm kind of the demo 😏",
+  "type below to ask me anything about him 💬",
 ];
 
 // Rule-based "brain" — matches the visitor's question to a canned answer built from
 // gurkeerat's real info. First matching rule wins, so order specific -> general.
 const KB = [
   { re: /\b(hi+|hey+|hello|yo|sup|howdy|good (morning|evening|afternoon))\b/, a: "hey! 👋 i'm gurkeerat's lil assistant. ask me about his projects, his experience, his skills, or how to reach him!" },
-  { re: /(who|what)\s*('?s| is| are)?\s*(you|u)\b|your name|you a bot|are you (ai|real|human)/, a: "i'm just a lil 3D companion gurkeerat set loose on his site 😌 but i know all about his work — ask away!" },
+  { re: /(who|what)\s*('?s| is| are)?\s*(you|u)\b|your name|you a bot|are you (ai|real|human)/, a: "i'm gurkeerat's AI companion 😌 i know all about his work, so ask away!" },
   { re: /plinky|tip\s?jar|tipping|crypto|usdc|\bwallet|non.?custod/, a: "Plinky's his non-custodial payments app 💸 fans tip creators in USDC straight to their own wallet — no middleman, none of the scary crypto jargon. live at <a href='https://plinky.to' target='_blank' rel='noopener'>plinky.to</a>!" },
   { re: /saleable|condoville|real.?estate|brokerage|\bmls\b|listing/, a: "Saleable's the real-estate AI suite he built at Condoville 🏠 a phone voice agent, a chatbot, an OREA contract-review copilot + a form generator over MLS data. see <a href='https://saleablere.com' target='_blank' rel='noopener'>saleablere.com</a>." },
   { re: /voice agent|voice ai|orpheus|\btts\b|text.?to.?speech|speech|self.?host/, a: "his self-hosted voice agent 🎙️ real-time + full-duplex, with a TTS voice he fine-tuned himself (Orpheus 3B + vLLM, one GPU, no external APIs). code on <a href='https://github.com/gurkeerat-s/voice-agent' target='_blank' rel='noopener'>github</a>." },
