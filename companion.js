@@ -26,7 +26,7 @@ const LINES = [
 // Rule-based "brain" — matches the visitor's question to a canned answer built from
 // gurkeerat's real info. First matching rule wins, so order specific -> general.
 const KB = [
-  { re: /\b(hi+|hey+|hello|yo|sup|howdy|good (morning|evening|afternoon))\b/, a: "hey! 👋 i'm gurkeerat's lil assistant. ask me about his projects, his experience, his skills, or how to reach him!" },
+  { re: /\b(hi+|hey+|hello|yo|sup|howdy|good (morning|evening|afternoon))\b/, a: "hey! 👋 i'm gurkeerat's assistant. ask me about his projects, his experience, his skills, or how to reach him!" },
   { re: /(who|what)\s*('?s| is| are)?\s*(you|u)\b|your name|you a bot|are you (ai|real|human)/, a: "i'm gurkeerat's AI companion 😌 i know all about his work, so ask away!" },
   { re: /plinky|tip\s?jar|tipping|crypto|usdc|\bwallet|non.?custod/, a: "Plinky's his non-custodial payments app 💸 fans tip creators in USDC straight to their own wallet — no middleman, none of the scary crypto jargon. live at <a href='https://plinky.to' target='_blank' rel='noopener'>plinky.to</a>!" },
   { re: /saleable|condoville|real.?estate|brokerage|\bmls\b|listing/, a: "Saleable's the real-estate AI suite he built at Condoville 🏠 a phone voice agent, a chatbot, an OREA contract-review copilot + a form generator over MLS data. see <a href='https://saleablere.com' target='_blank' rel='noopener'>saleablere.com</a>." },
