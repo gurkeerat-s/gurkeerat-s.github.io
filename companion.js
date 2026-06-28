@@ -143,19 +143,16 @@ export function initCompanion() {
     if (vrm) {
       t += dt;
       if (mixer) {
-        // real VRM animation drives the body, with a gentle breathing rest between passes
-        if (animState === 'play') {
-          mixer.update(dt);
-          vrm.scene.position.y = 0;
-        } else {
-          // resting: a clearly visible breathing + weight-shift idle (not a freeze-frame)
-          const breathe = Math.sin(t * 1.7);
-          const spine = B('spine'); if (spine) { spine.rotation.x = breathe * 0.07; spine.rotation.z = Math.sin(t * 0.8) * 0.08; }
-          const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.04;
-          const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.8) * 0.07;
-          const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.7) * 0.13;
-          const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.7) * 0.24; head.rotation.x = Math.sin(t * 0.5) * 0.08; }
-          vrm.scene.position.y = breathe * 0.03;
+        // The animation is ALWAYS the base pose (playing the pass, or clamped at rest).
+        mixer.update(dt);
+        // Gentle breathing is ADDED on top every frame -> no hard switch, so nothing can jump.
+        const breathe = Math.sin(t * 1.6);
+        const spine = B('spine'); if (spine) { spine.rotation.x += breathe * 0.045; spine.rotation.z += Math.sin(t * 0.7) * 0.03; }
+        const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x += breathe * 0.025;
+        const head = B('head'); if (head) { head.rotation.y += Math.sin(t * 0.6) * 0.07; head.rotation.x += Math.sin(t * 0.45) * 0.04; }
+        vrm.scene.position.y = breathe * 0.02;
+        // after a pass finishes, rest a bit (breathing continues), then play it again
+        if (animState === 'hold') {
           animHold -= dt;
           if (animHold <= 0) {
             action.reset();
