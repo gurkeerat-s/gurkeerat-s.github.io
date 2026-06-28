@@ -148,12 +148,14 @@ export function initCompanion() {
           mixer.update(dt);
           vrm.scene.position.y = 0;
         } else {
-          // resting: subtle breathing bob so she's alive, not a freeze-frame
-          const breathe = Math.sin(t * 1.5);
-          const spine = B('spine'); if (spine) spine.rotation.x = breathe * 0.03;
-          const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.02;
-          const head = B('head'); if (head) head.rotation.y = Math.sin(t * 0.5) * 0.05;
-          vrm.scene.position.y = breathe * 0.012;
+          // resting: a clearly visible breathing + weight-shift idle (not a freeze-frame)
+          const breathe = Math.sin(t * 1.6);
+          const spine = B('spine'); if (spine) { spine.rotation.x = breathe * 0.06; spine.rotation.z = Math.sin(t * 0.7) * 0.05; }
+          const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.035;
+          const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.8) * 0.05;
+          const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.6) * 0.10;
+          const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.6) * 0.16; head.rotation.x = Math.sin(t * 0.45) * 0.06; }
+          vrm.scene.position.y = breathe * 0.025;
           animHold -= dt;
           if (animHold <= 0) {
             action.reset();
