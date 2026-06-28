@@ -20,7 +20,39 @@ const LINES = [
   "i'm just a lil VRM he set loose on his site 😌",
   "still here? he's genuinely worth a reply 💌",
   "he builds AI agents… so yeah, i'm kind of the demo 😏",
+  "psst — type below to ask me anything about him 💬",
 ];
+
+// Rule-based "brain" — matches the visitor's question to a canned answer built from
+// gurkeerat's real info. First matching rule wins, so order specific -> general.
+const KB = [
+  { re: /\b(hi+|hey+|hello|yo|sup|howdy|good (morning|evening|afternoon))\b/, a: "hey! 👋 i'm gurkeerat's lil assistant. ask me about his projects, his experience, his skills, or how to reach him!" },
+  { re: /(who|what)\s*('?s| is| are)?\s*(you|u)\b|your name|you a bot|are you (ai|real|human)/, a: "i'm just a lil 3D companion gurkeerat set loose on his site 😌 but i know all about his work — ask away!" },
+  { re: /plinky|tip\s?jar|tipping|crypto|usdc|\bwallet|non.?custod/, a: "Plinky's his non-custodial payments app 💸 fans tip creators in USDC straight to their own wallet — no middleman, none of the scary crypto jargon. live at <a href='https://plinky.to' target='_blank' rel='noopener'>plinky.to</a>!" },
+  { re: /saleable|condoville|real.?estate|brokerage|\bmls\b|listing/, a: "Saleable's the real-estate AI suite he built at Condoville 🏠 a phone voice agent, a chatbot, an OREA contract-review copilot + a form generator over MLS data. see <a href='https://saleablere.com' target='_blank' rel='noopener'>saleablere.com</a>." },
+  { re: /voice agent|voice ai|orpheus|\btts\b|text.?to.?speech|speech|self.?host/, a: "his self-hosted voice agent 🎙️ real-time + full-duplex, with a TTS voice he fine-tuned himself (Orpheus 3B + vLLM, one GPU, no external APIs). code on <a href='https://github.com/gurkeerat-s/voice-agent' target='_blank' rel='noopener'>github</a>." },
+  { re: /chattelbot|receptionist|dealership/, a: "ChattelBot 📞 an AI voice + chat receptionist he shipped to 5+ businesses — LiveKit + GPT + RAG. live at <a href='https://www.chattelbot.com' target='_blank' rel='noopener'>chattelbot.com</a>." },
+  { re: /outlier|scale ai|rlhf|red.?team|model eval|evaluat/, a: "at Outlier AI (Scale AI) he was a prompt engineer + model evaluator 🧪 RLHF preference data, red-teaming, gold-standard answers — 200+ LLM outputs a week." },
+  { re: /urai|lead gen|lead generation|prospect/, a: "at Urai he built custom AI systems to source + qualify leads 🎯 industry-targeted prospect lists at scale." },
+  { re: /project|portfolio|\bbuilt\b|\bbuild\b|\bmade\b|ship|what.*(does|do|work)|his work/, a: "he's shipped a bunch 🚀 Plinky (crypto payments), Saleable (real-estate AI suite), a self-hosted voice agent, + ChattelBot. wanna hear about one? just name it!" },
+  { re: /experience|\bjobs?\b|worked|companies|employ|career/, a: "real roles: Saleable / Condoville (AI dev), Outlier AI / Scale (model eval + RLHF), ChattelBot (full-stack AI), and Urai (AI lead gen) 💼 scroll up for the details!" },
+  { re: /skill|tech|stack|language|tools|framework|programming|coding/, a: "he works in Python, TypeScript, Java, R, SQL 🛠️ plus LangChain, RAG, vector DBs, LiveKit, model fine-tuning / vLLM, and Next.js/React. ML + full-stack both." },
+  { re: /contact|reach|e.?mail|get in touch|message|connect|\bdm\b|talk to him|how.*(contact|reach)/, a: "easiest is email: <a href='mailto:gurkeeratsappal@gmail.com'>gurkeeratsappal@gmail.com</a> 💌 he's also on <a href='https://www.linkedin.com/in/gurkeerat-sappal' target='_blank' rel='noopener'>linkedin</a> + <a href='https://github.com/gurkeerat-s' target='_blank' rel='noopener'>github</a>." },
+  { re: /intern|hiring|hire|available|looking|open to|co.?op|opportunit|\broles?\b/, a: "yep! he's after an AI/ML internship or co-op for fall 2026 👀 Toronto-based but down for remote. email him: <a href='mailto:gurkeeratsappal@gmail.com'>gurkeeratsappal@gmail.com</a>!" },
+  { re: /resume|\bcv\b/, a: "his resume's not on the site, but email him (<a href='mailto:gurkeeratsappal@gmail.com'>gurkeeratsappal@gmail.com</a>) and he'll send it right over 📄" },
+  { re: /school|study|studi|education|degree|major|uoft|university|college|student|\bgpa\b/, a: "he studies CS + Statistics + Math at the University of Toronto (Mississauga) 🎓 graduating 2027, Dean's List." },
+  { re: /where|location|based|\blive\b|remote|toronto|canada|ontario/, a: "he's in the Toronto area 🇨🇦 (Brampton / Mississauga) and totally open to remote." },
+  { re: /thank|thx|\bty\b|appreciate/, a: "anytime! 💛" },
+  { re: /bye|goodbye|see ya|\blater\b|\bcya\b|peace out/, a: "see ya! 👋 don't forget to peek at his projects ✨" },
+  { re: /this site|website|made you|built you|how.*made|who made/, a: "gurkeerat built this whole site — and me! — himself 😎 he's into AI + a bit of 3D." },
+  { re: /love you|marry|\bcute\b|pretty|\bhot\b|girlfriend|\bgf\b|\bdate\b/, a: "aw 😳 i'm just here to chat about gurkeerat's work, haha. ask me something about him!" },
+];
+function answer(q) {
+  const s = (q || '').toLowerCase().trim();
+  if (!s) return null;
+  for (const k of KB) if (k.re.test(s)) return k.a;
+  return "hmm, i mostly know about gurkeerat 😅 try asking about his projects, his experience, his skills, or how to reach him!";
+}
 
 let started = false;
 
@@ -31,14 +63,22 @@ function injectStyles() {
   s.textContent = `
   #cmp-stage{position:fixed;inset:0;z-index:45;pointer-events:none;overflow:hidden}
   #cmp-canvas{width:100%;height:100%;display:block}
-  #cmp-bubble{position:absolute;left:0;top:0;max-width:240px;transform:translate(-50%,-100%);
-    background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:9px 12px;
-    font-size:13px;line-height:1.35;color:var(--fg);box-shadow:0 10px 30px rgba(0,0,0,.16);
-    opacity:0;transition:opacity .45s ease;pointer-events:none}
+  #cmp-bubble{position:absolute;left:0;top:0;max-width:300px;max-height:46vh;overflow:auto;
+    transform:translate(-100%,-50%);
+    background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:10px 13px;
+    font-size:13px;line-height:1.4;color:var(--fg);box-shadow:0 10px 30px rgba(0,0,0,.16);
+    opacity:0;transition:opacity .35s ease;pointer-events:auto}
+  #cmp-bubble a{color:var(--accent);text-decoration:underline;font-weight:600}
   #cmp-close{position:fixed;right:16px;bottom:16px;z-index:46;pointer-events:auto;cursor:pointer;
     background:var(--chip);border:1px solid var(--line);color:var(--fg);border-radius:999px;
     padding:6px 13px;font:inherit;font-size:12px}
   #cmp-close:hover{border-color:var(--accent);color:var(--accent)}
+  #cmp-chat{position:fixed;right:16px;bottom:54px;z-index:46;pointer-events:auto;width:min(330px,72vw)}
+  #cmp-chat input{width:100%;font:inherit;font-size:13px;padding:9px 14px;border-radius:999px;
+    border:1px solid var(--line);background:var(--bg);color:var(--fg);outline:none;
+    box-shadow:0 6px 20px rgba(0,0,0,.12)}
+  #cmp-chat input::placeholder{color:var(--muted)}
+  #cmp-chat input:focus{border-color:var(--accent)}
   `;
   document.head.appendChild(s);
 }
@@ -56,6 +96,11 @@ export function initCompanion() {
   const close = document.createElement('button');
   close.id = 'cmp-close'; close.textContent = '✕ hide';
   document.body.appendChild(close);
+  const chat = document.createElement('div');
+  chat.id = 'cmp-chat';
+  chat.innerHTML = `<input id="cmp-chat-input" type="text" autocomplete="off" maxlength="120" placeholder="ask me about gurkeerat…" />`;
+  document.body.appendChild(chat);
+  const chatInput = chat.querySelector('#cmp-chat-input');
 
   const canvas = stage.querySelector('#cmp-canvas');
   const bubble = stage.querySelector('#cmp-bubble');
@@ -80,8 +125,23 @@ export function initCompanion() {
 
   let vrm = null, baseY = 0, t = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
-  let bubbleOn = false, lineTimer = 0.6, lineI = 0;
+  let bubbleOn = false, lineTimer = 0.6, lineI = 0, chatHold = 0;
   const HOME_X = 1.0;
+
+  // show a reply (or any HTML) in the bubble and hold it, pausing the auto-cycling lines
+  function say(html) {
+    bubble.innerHTML = html;
+    bubble.style.opacity = '1';
+    bubbleOn = true; chatHold = 9; lineTimer = 9;
+  }
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const q = chatInput.value.trim();
+      if (!q) return;
+      chatInput.value = '';
+      say(answer(q));
+    }
+  });
   const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
 
   // soft contact shadow so she's grounded, not floating
@@ -148,16 +208,17 @@ export function initCompanion() {
 
       vrm.update(dt);
 
-      // speech bubble: cycle lines (5.5s on, 4s off), follow her head on screen
+      // speech bubble: auto-cycle lines, unless a chat reply is being held
       lineTimer -= dt;
-      if (lineTimer <= 0) {
+      if (chatHold > 0) chatHold -= dt;
+      if (lineTimer <= 0 && chatHold <= 0) {
         if (bubbleOn) { bubble.style.opacity = '0'; bubbleOn = false; lineTimer = 4; }
         else { bubble.textContent = LINES[lineI++ % LINES.length]; bubble.style.opacity = '1'; bubbleOn = true; lineTimer = 5.5; }
       }
       const hn = B('head');
       if (hn) {
-        const p = new THREE.Vector3(); hn.getWorldPosition(p); p.y += 0.3; p.project(camera);
-        bubble.style.left = ((p.x * 0.5 + 0.5) * window.innerWidth) + 'px';
+        const p = new THREE.Vector3(); hn.getWorldPosition(p); p.y += 0.12; p.project(camera);
+        bubble.style.left = ((p.x * 0.5 + 0.5) * window.innerWidth - 16) + 'px';  // sit to her left
         bubble.style.top = ((-p.y * 0.5 + 0.5) * window.innerHeight) + 'px';
       }
     }
@@ -170,7 +231,7 @@ export function initCompanion() {
     document.documentElement.classList.remove('cmp-active');
     window.removeEventListener('resize', resize);
     renderer.dispose();
-    stage.remove(); close.remove();
+    stage.remove(); close.remove(); chat.remove();
     const summon = document.getElementById('summon-btn');
     if (summon) summon.style.display = '';
   };
