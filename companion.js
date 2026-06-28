@@ -115,18 +115,28 @@ export function initCompanion() {
   const keyL = new THREE.DirectionalLight(0xfff5ec, 1.0); keyL.position.set(2, 3, 2); scene.add(keyL);
   const fillL = new THREE.DirectionalLight(0xdce4ff, 0.4); fillL.position.set(-2, 1, 1.5); scene.add(fillL);
 
+  let HOME_X = 1.0;
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(w, h, false);
-    camera.aspect = w / h; camera.updateProjectionMatrix();
+    camera.aspect = w / h;
+    if (w < 700) {                       // narrow / portrait: center her + pull back so she fits on-screen
+      HOME_X = 0;
+      camera.position.set(0, 1.0, 5.0);
+      camera.lookAt(0, 1.0, 0);
+    } else {                             // desktop: docked to the right
+      HOME_X = 1.0;
+      camera.position.set(0, 0.90, 3.5);
+      camera.lookAt(0, 0.90, 0);
+    }
+    camera.updateProjectionMatrix();
   }
   resize(); window.addEventListener('resize', resize);
 
   let vrm = null, baseY = 0, t = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0, chatHold = 0;
-  const HOME_X = 1.0;
 
   // show a reply (or any HTML) in the bubble and hold it, pausing the auto-cycling lines
   function say(html) {
@@ -195,6 +205,7 @@ export function initCompanion() {
       vrm.scene.position.y = breathe * 0.02;
       vrm.scene.position.x = HOME_X;
       vrm.scene.rotation.y = baseY;
+      shadow.position.x = HOME_X;
 
       // blink
       blinkTimer -= dt;

@@ -25,6 +25,7 @@
   }
   .wrap{max-width:720px; margin:0 auto; padding:0 24px; transition:margin .4s ease}
   html.cmp-active .wrap{margin-left:clamp(24px,5vw,110px); margin-right:auto}
+  @media (max-width:700px){ html.cmp-active .wrap{margin-left:auto} }
   a{color:inherit}
   nav{display:flex; align-items:center; gap:22px; padding:26px 0; font-size:14px}
   nav a{color:var(--muted); text-decoration:none}
@@ -210,7 +211,7 @@
   async function summon() {
     sb.style.display = 'none';
     try {
-      const m = await import('./companion.js?v=36');
+      const m = await import('./companion.js?v=37');
       m.initCompanion();
     } catch (e) {
       console.error(e);
