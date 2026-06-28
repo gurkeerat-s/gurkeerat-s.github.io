@@ -80,7 +80,7 @@ export function initCompanion() {
   resize(); window.addEventListener('resize', resize);
 
   let vrm = null, baseY = 0, t = 0, mixer = null, action = null;
-  let animState = 'play', animHold = 0;
+  let clipDur = 0, scrubDir = 1, scrubbing = true, restTimer = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0;
   const HOME_X = 1.0;
@@ -117,17 +117,9 @@ export function initCompanion() {
       if (!va || !vrm) return;
       mixer = new THREE.AnimationMixer(vrm.scene);
       action = mixer.clipAction(createVRMAnimationClip(va, vrm));
-      action.timeScale = 0.7;                          // a touch slower / calmer
-      const playPass = () => {                         // one forward + reverse pass, then stop at rest
-        action.reset();
-        action.setLoop(THREE.LoopPingPong, 2);
-        action.clampWhenFinished = true;
-        action.play();
-        animState = 'play';
-      };
-      // when the pass finishes, rest for a couple seconds before going again
-      mixer.addEventListener('finished', () => { animState = 'hold'; animHold = 1.3 + Math.random() * 1.0; });
-      playPass();
+      clipDur = action.getClip().duration;
+      action.play();
+      action.paused = true;   // we scrub action.time ourselves; the mixer still applies the pose every frame
     }, undefined, (err) => console.warn('[companion] animation load failed, using procedural idle', err));
   }, undefined, (e) => {
     console.error('[companion] avatar load failed', e);
@@ -143,25 +135,24 @@ export function initCompanion() {
     if (vrm) {
       t += dt;
       if (mixer) {
-        // The animation is ALWAYS the base pose (playing the pass, or clamped at rest).
-        mixer.update(dt);
-        // Gentle breathing is ADDED on top every frame -> no hard switch, so nothing can jump.
-        const breathe = Math.sin(t * 1.6);
-        const spine = B('spine'); if (spine) { spine.rotation.x += breathe * 0.045; spine.rotation.z += Math.sin(t * 0.7) * 0.03; }
-        const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x += breathe * 0.025;
-        const head = B('head'); if (head) { head.rotation.y += Math.sin(t * 0.6) * 0.07; head.rotation.x += Math.sin(t * 0.45) * 0.04; }
-        vrm.scene.position.y = breathe * 0.02;
-        // after a pass finishes, rest a bit (breathing continues), then play it again
-        if (animState === 'hold') {
-          animHold -= dt;
-          if (animHold <= 0) {
-            action.reset();
-            action.setLoop(THREE.LoopPingPong, 2);
-            action.clampWhenFinished = true;
-            action.play();
-            animState = 'play';
-          }
+        // Scrub the look-around timeline ourselves: forward to the end, back to the start,
+        // then rest a moment at the start pose, repeat. (Manual so the rest can't "finish"
+        // the action and stop re-applying the base pose.)
+        if (scrubbing) {
+          action.time += scrubDir * dt * 0.7;
+          if (action.time >= clipDur) { action.time = clipDur; scrubDir = -1; }
+          else if (action.time <= 0) { action.time = 0; scrubDir = 1; scrubbing = false; restTimer = 1.3 + Math.random() * 1.0; }
+        } else {
+          restTimer -= dt;
+          if (restTimer <= 0) scrubbing = true;
         }
+        mixer.update(dt);   // paused action -> re-applies the pose at action.time EVERY frame (stable base)
+        // breathing added on top; since the base is re-applied every frame, this never compounds
+        const breathe = Math.sin(t * 1.6);
+        const spine = B('spine'); if (spine) { spine.rotation.x += breathe * 0.05; spine.rotation.z += Math.sin(t * 0.7) * 0.035; }
+        const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x += breathe * 0.03;
+        const head = B('head'); if (head) { head.rotation.y += Math.sin(t * 0.6) * 0.10; head.rotation.x += Math.sin(t * 0.45) * 0.05; }
+        vrm.scene.position.y = breathe * 0.02;
       } else {
         // fallback procedural idle (until the animation finishes loading, or if it fails)
         const breathe = Math.sin(t * 1.5);
