@@ -124,8 +124,8 @@ export function initCompanion() {
     camera.aspect = w / h;
     if (w < 700) {                       // narrow / portrait: smaller + nudged right so her speech bubble has room on the left
       HOME_X = 0.55;
-      camera.position.set(0, 1.0, 6.8);
-      camera.lookAt(0, 1.0, 0);
+      camera.position.set(0, 1.5, 6.8);   // aim higher -> she drops lower in frame, standing near the chat box
+      camera.lookAt(0, 1.5, 0);
     } else {                             // desktop: docked to the right
       HOME_X = 1.0;
       camera.position.set(0, 0.90, 3.5);
