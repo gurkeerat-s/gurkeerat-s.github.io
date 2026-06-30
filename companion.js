@@ -23,36 +23,9 @@ const LINES = [
   "type below to ask me anything about him 💬",
 ];
 
-// Rule-based "brain" — matches the visitor's question to a canned answer built from
-// gurkeerat's real info. First matching rule wins, so order specific -> general.
-const KB = [
-  { re: /\b(hi+|hey+|hello|yo|sup|howdy|good (morning|evening|afternoon))\b/, a: "hey! 👋 i'm gurkeerat's assistant. ask me about his projects, his experience, his skills, or how to reach him!" },
-  { re: /(who|what)\s*('?s| is| are)?\s*(you|u)\b|your name|you a bot|are you (ai|real|human)/, a: "i'm gurkeerat's AI companion 😌 i know all about his work, so ask away!" },
-  { re: /plinky|tip\s?jar|tipping|crypto|usdc|\bwallet|non.?custod/, a: "Plinky's his non-custodial payments app 💸 fans tip creators in USDC straight to their own wallet — no middleman, none of the scary crypto jargon. live at <a href='https://plinky.to' target='_blank' rel='noopener'>plinky.to</a>!" },
-  { re: /saleable|condoville|real.?estate|brokerage|\bmls\b|listing/, a: "Saleable's the real-estate AI suite he built at Condoville 🏠 a phone voice agent, a chatbot, an OREA contract-review copilot + a form generator over MLS data. see <a href='https://saleablere.com' target='_blank' rel='noopener'>saleablere.com</a>." },
-  { re: /voice agent|voice ai|orpheus|\btts\b|text.?to.?speech|speech|self.?host/, a: "his self-hosted voice agent 🎙️ real-time + full-duplex, with a TTS voice he fine-tuned himself (Orpheus 3B + vLLM, one GPU, no external APIs). code on <a href='https://github.com/gurkeerat-s/voice-agent' target='_blank' rel='noopener'>github</a>." },
-  { re: /chattelbot|receptionist|dealership/, a: "ChattelBot 📞 an AI voice + chat receptionist he shipped to 5+ businesses — LiveKit + GPT + RAG. live at <a href='https://www.chattelbot.com' target='_blank' rel='noopener'>chattelbot.com</a>." },
-  { re: /outlier|scale ai|rlhf|red.?team|model eval|evaluat/, a: "at Outlier AI (Scale AI) he was a prompt engineer + model evaluator 🧪 RLHF preference data, red-teaming, gold-standard answers — 200+ LLM outputs a week." },
-  { re: /urai|lead gen|lead generation|prospect/, a: "at Urai he built custom AI systems to source + qualify leads 🎯 industry-targeted prospect lists at scale." },
-  { re: /project|portfolio|\bbuilt\b|\bbuild\b|\bmade\b|ship|what.*(does|do|work)|his work/, a: "he's shipped a bunch 🚀 Plinky (crypto payments), Saleable (real-estate AI suite), a self-hosted voice agent, + ChattelBot. wanna hear about one? just name it!" },
-  { re: /experience|\bjobs?\b|worked|companies|employ|career/, a: "real roles: Saleable / Condoville (AI dev), Outlier AI / Scale (model eval + RLHF), ChattelBot (full-stack AI), and Urai (AI lead gen) 💼 scroll up for the details!" },
-  { re: /skill|tech|stack|language|tools|framework|programming|coding/, a: "he works in Python, TypeScript, Java, R, SQL 🛠️ plus LangChain, RAG, vector DBs, LiveKit, model fine-tuning / vLLM, and Next.js/React. ML + full-stack both." },
-  { re: /contact|reach|e.?mail|get in touch|message|connect|\bdm\b|talk to him|how.*(contact|reach)/, a: "easiest is email: <a href='mailto:gurkeeratsappal@gmail.com'>gurkeeratsappal@gmail.com</a> 💌 he's also on <a href='https://www.linkedin.com/in/gurkeerat-sappal' target='_blank' rel='noopener'>linkedin</a> + <a href='https://github.com/gurkeerat-s' target='_blank' rel='noopener'>github</a>." },
-  { re: /intern|hiring|hire|available|looking|open to|co.?op|opportunit|\broles?\b/, a: "yep! he's after an AI/ML internship or co-op for fall 2026 👀 Toronto-based but down for remote. email him: <a href='mailto:gurkeeratsappal@gmail.com'>gurkeeratsappal@gmail.com</a>!" },
-  { re: /resume|\bcv\b/, a: "his resume's not on the site, but email him (<a href='mailto:gurkeeratsappal@gmail.com'>gurkeeratsappal@gmail.com</a>) and he'll send it right over 📄" },
-  { re: /school|study|studi|education|degree|major|uoft|university|college|student|\bgpa\b/, a: "he studies CS + Statistics + Math at the University of Toronto (Mississauga) 🎓 graduating 2027, Dean's List." },
-  { re: /where|location|based|\blive\b|remote|toronto|canada|ontario/, a: "he's in the Toronto area 🇨🇦 (Brampton / Mississauga) and totally open to remote." },
-  { re: /thank|thx|\bty\b|appreciate/, a: "anytime! 💛" },
-  { re: /bye|goodbye|see ya|\blater\b|\bcya\b|peace out/, a: "see ya! 👋 don't forget to peek at his projects ✨" },
-  { re: /this site|website|made you|built you|how.*made|who made/, a: "gurkeerat built this whole site — and me! — himself 😎 he's into AI + a bit of 3D." },
-  { re: /love you|marry|\bcute\b|pretty|\bhot\b|girlfriend|\bgf\b|\bdate\b/, a: "aw 😳 i'm just here to chat about gurkeerat's work, haha. ask me something about him!" },
-];
-function answer(q) {
-  const s = (q || '').toLowerCase().trim();
-  if (!s) return null;
-  for (const k of KB) if (k.re.test(s)) return k.a;
-  return "hmm, i mostly know about gurkeerat 😅 try asking about his projects, his experience, his skills, or how to reach him!";
-}
+// Her "brain" is a tiny Cloudflare Worker that proxies to Claude (Haiku), holding the
+// API key server-side. See worker/companion-worker.js.
+const WORKER = 'https://companion-chat.gurkeeratsappal.workers.dev';
 
 let started = false;
 
@@ -73,12 +46,17 @@ function injectStyles() {
     background:var(--chip);border:1px solid var(--line);color:var(--fg);border-radius:999px;
     padding:6px 13px;font:inherit;font-size:12px}
   #cmp-close:hover{border-color:var(--accent);color:var(--accent)}
-  #cmp-chat{position:fixed;right:16px;bottom:54px;z-index:46;pointer-events:auto;width:min(330px,72vw)}
-  #cmp-chat input{width:100%;font:inherit;font-size:13px;padding:9px 14px;border-radius:999px;
+  #cmp-chat{position:fixed;right:16px;bottom:54px;z-index:46;pointer-events:auto;
+    width:min(330px,72vw);display:flex;gap:6px}
+  #cmp-chat input{flex:1;min-width:0;font:inherit;font-size:13px;padding:9px 14px;border-radius:999px;
     border:1px solid var(--line);background:var(--bg);color:var(--fg);outline:none;
     box-shadow:0 6px 20px rgba(0,0,0,.12)}
   #cmp-chat input::placeholder{color:var(--muted)}
   #cmp-chat input:focus{border-color:var(--accent)}
+  #cmp-mic{flex:0 0 auto;width:40px;font-size:15px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--line);background:var(--bg);box-shadow:0 6px 20px rgba(0,0,0,.12)}
+  #cmp-mic:hover{border-color:var(--accent)}
+  #cmp-mic.live{background:#b91c1c;border-color:#b91c1c}
   @media (max-width:700px){ #cmp-bubble{max-width:74vw} }
   `;
   document.head.appendChild(s);
@@ -99,9 +77,10 @@ export function initCompanion() {
   document.body.appendChild(close);
   const chat = document.createElement('div');
   chat.id = 'cmp-chat';
-  chat.innerHTML = `<input id="cmp-chat-input" type="text" autocomplete="off" maxlength="120" placeholder="ask me about gurkeerat…" />`;
+  chat.innerHTML = `<input id="cmp-chat-input" type="text" autocomplete="off" maxlength="160" placeholder="ask me about gurkeerat…" /><button id="cmp-mic" title="talk to me" aria-label="talk">🎤</button>`;
   document.body.appendChild(chat);
   const chatInput = chat.querySelector('#cmp-chat-input');
+  const micBtn = chat.querySelector('#cmp-mic');
 
   const canvas = stage.querySelector('#cmp-canvas');
   const bubble = stage.querySelector('#cmp-bubble');
@@ -138,22 +117,84 @@ export function initCompanion() {
   let vrm = null, baseY = 0, t = 0;
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0, chatHold = 0;
+  let speaking = false, talk = 0, busy = false;
+  const B = (n) => vrm?.humanoid?.getNormalizedBoneNode(n);
 
-  // show a reply (or any HTML) in the bubble and hold it, pausing the auto-cycling lines
-  function say(html) {
-    bubble.innerHTML = html;
+  // show text in the bubble and hold it (pausing the auto-cycling idle lines)
+  function showBubble(text) {
+    bubble.textContent = text;
     bubble.style.opacity = '1';
-    bubbleOn = true; chatHold = 9; lineTimer = 9;
+    bubbleOn = true; chatHold = 14; lineTimer = 14;
+  }
+
+  // --- her voice (browser TTS) — `speaking` drives lip-sync + gestures in the loop ---
+  let voice = null;
+  function pickVoice() {
+    const vs = speechSynthesis.getVoices();
+    voice = vs.find(v => /female|samantha|karen|moira|tessa|zira|aria|jenny|google us english/i.test(v.name) && /en/i.test(v.lang))
+         || vs.find(v => /en-US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || vs[0] || null;
+  }
+  if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  function speak(text) {
+    return new Promise(res => {
+      if (!('speechSynthesis' in window)) { res(); return; }
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      if (voice) u.voice = voice;
+      u.rate = 1.03; u.pitch = 1.1;
+      u.onstart = () => { speaking = true; };
+      u.onend = () => { speaking = false; res(); };
+      u.onerror = () => { speaking = false; res(); };
+      speechSynthesis.speak(u);
+    });
+  }
+
+  // --- conversation: real Claude via the worker ---
+  const history = [];
+  async function askClaude(text) {
+    history.push({ role: 'user', content: text });
+    let reply = "hmm, i glitched for a sec — try me again?";
+    try {
+      const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history.slice(-10) }) });
+      const d = await r.json();
+      if (d.reply) reply = d.reply;
+    } catch (e) { /* keep fallback */ }
+    history.push({ role: 'assistant', content: reply });
+    return reply;
+  }
+  async function handleUser(text) {
+    if (busy) return;
+    busy = true;
+    showBubble('…');
+    const reply = await askClaude(text);
+    showBubble(reply);
+    await speak(reply);
+    busy = false;
   }
   chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const q = chatInput.value.trim();
       if (!q) return;
       chatInput.value = '';
-      say(answer(q));
+      handleUser(q);
     }
   });
-  const B = (n) => vrm.humanoid?.getNormalizedBoneNode(n);
+
+  // --- voice input: push-to-talk ---
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null, listening = false;
+  micBtn.addEventListener('click', () => {
+    if (!SR) { showBubble("voice input works best in chrome 😅 just type to me!"); return; }
+    if (listening) { try { recog.stop(); } catch (e) {} return; }
+    speechSynthesis.cancel();
+    recog = new SR(); recog.lang = 'en-US'; recog.interimResults = false; recog.continuous = false; recog.maxAlternatives = 1;
+    recog.onstart = () => { listening = true; micBtn.classList.add('live'); showBubble('listening… 🎙️'); };
+    recog.onresult = (e) => { const txt = (e.results[0][0].transcript || '').trim(); if (txt) handleUser(txt); };
+    recog.onerror = (ev) => { if (ev.error === 'not-allowed') showBubble('mic blocked — type to me instead!'); };
+    recog.onend = () => { listening = false; micBtn.classList.remove('live'); };
+    try { recog.start(); } catch (e) {}
+  });
 
   // soft contact shadow so she's grounded, not floating
   const shCanvas = document.createElement('canvas'); shCanvas.width = shCanvas.height = 128;
@@ -203,6 +244,21 @@ export function initCompanion() {
       if (rUA) { rUA.rotation.z = -1.42 - Math.sin(t * 0.8 + 0.6) * 0.05; rUA.rotation.x = Math.sin(t * 0.9 + 0.6) * 0.05; }
       if (lLA) lLA.rotation.x = -0.16 + Math.sin(t * 0.9) * 0.05;
       if (rLA) rLA.rotation.x = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05;
+
+      // talking: smoothly ramp `talk`, then layer livelier head + light hand gestures on top
+      talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 6);
+      if (talk > 0.001) {
+        if (head) { head.rotation.x += Math.sin(t * 4.6) * 0.06 * talk; head.rotation.y += Math.sin(t * 2.4) * 0.10 * talk; head.rotation.z += Math.sin(t * 3.2) * 0.03 * talk; }
+        if (spine) spine.rotation.x += Math.sin(t * 2.1) * 0.02 * talk;
+        if (lUA) lUA.rotation.x += (-0.18 + Math.sin(t * 2.6) * 0.12) * talk;
+        if (rUA) rUA.rotation.x += (-0.18 + Math.sin(t * 2.6 + 0.9) * 0.12) * talk;
+        if (lLA) lLA.rotation.x += (-0.5 + Math.sin(t * 3.0) * 0.22) * talk;
+        if (rLA) rLA.rotation.x += (-0.5 + Math.sin(t * 3.0 + 1.0) * 0.22) * talk;
+      }
+      // lip-sync mouth + a small smile while she speaks
+      vrm.expressionManager?.setValue('aa', speaking ? (0.16 + 0.22 * (Math.sin(t * 13) * 0.5 + 0.5)) : 0);
+      vrm.expressionManager?.setValue('happy', 0.18 * talk);
+
       vrm.scene.position.y = breathe * 0.02;
       vrm.scene.position.x = HOME_X;
       vrm.scene.rotation.y = baseY;
@@ -240,6 +296,8 @@ export function initCompanion() {
 
   close.onclick = () => {
     started = false;
+    try { speechSynthesis.cancel(); } catch (e) {}
+    if (recog && listening) { try { recog.stop(); } catch (e) {} }
     document.documentElement.classList.remove('cmp-active');
     window.removeEventListener('resize', resize);
     renderer.dispose();
