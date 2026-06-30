@@ -90,8 +90,9 @@ function loadMixamoAnimation(url, vrm) {
             track.values.map((v, i) => (vrm.meta?.metaVersion === '0' && i % 2 === 0 ? -v : v)),
           ));
         }
-        // NOTE: position (VectorKeyframeTrack) tracks are intentionally skipped — we don't want root
-        // motion on a planted companion, and the retargeted hips translation otherwise flings her off-screen.
+        // Position (VectorKeyframeTrack) tracks are intentionally skipped: the retargeted hips translation
+        // flings her off-screen on these files (unreliable hips-height scale). She stays planted at rest
+        // height; the camera framing + contact shadow keep her looking grounded.
       }
     });
     return new THREE.AnimationClip('vrmAnimation', clip.duration, tracks);
@@ -176,10 +177,10 @@ export function initCompanion() {
       HOME_X = 0.55;
       camera.position.set(0, 1.5, 6.8);   // aim higher -> she drops lower in frame, standing near the chat box
       camera.lookAt(0, 1.5, 0);
-    } else {                             // desktop: docked to the right
+    } else {                             // desktop: docked to the right, aimed lower so the ground + shadow show under her feet (no floating)
       HOME_X = 1.0;
-      camera.position.set(0, 0.90, 3.5);
-      camera.lookAt(0, 0.90, 0);
+      camera.position.set(0, 0.82, 3.6);
+      camera.lookAt(0, 0.72, 0);
     }
     camera.updateProjectionMatrix();
   }
@@ -191,6 +192,9 @@ export function initCompanion() {
   let speaking = false, talk = 0, busy = false;
   // mocap playback: AnimationMixer crossfading a looping idle clip <-> talking clips
   let mixer = null, idleAction = null, talkActions = [], currentAction = null, talkSwitchT = 0;
+  // living eyes: a lookAt target that darts around, mostly toward the viewer
+  let eyeTarget = null, eyeTimer = 0.5;
+  const eyeGoal = new THREE.Vector3(0, 1.3, 3);
   function fadeTo(action, dur = 0.45) {
     if (!action || action === currentAction) return;
     if (currentAction) currentAction.fadeOut(dur);
@@ -309,10 +313,10 @@ export function initCompanion() {
   const shCanvas = document.createElement('canvas'); shCanvas.width = shCanvas.height = 128;
   const shCtx = shCanvas.getContext('2d');
   const grd = shCtx.createRadialGradient(64, 64, 3, 64, 64, 60);
-  grd.addColorStop(0, 'rgba(0,0,0,0.33)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  grd.addColorStop(0, 'rgba(0,0,0,0.45)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
   shCtx.fillStyle = grd; shCtx.fillRect(0, 0, 128, 128);
   const shadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.95, 0.55),
+    new THREE.PlaneGeometry(1.15, 0.62),
     new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shCanvas), transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.set(HOME_X, 0.01, 0.06);
@@ -327,6 +331,9 @@ export function initCompanion() {
     VRMUtils.rotateVRM0(vrm);
     baseY = vrm.scene.rotation.y;
     scene.add(vrm.scene);
+
+    // give her living eyes: aim VRM lookAt at a target we drift around (mostly toward the viewer)
+    if (vrm.lookAt) { eyeTarget = new THREE.Object3D(); eyeTarget.position.set(0, 1.3, 3); scene.add(eyeTarget); vrm.lookAt.target = eyeTarget; }
 
     // load the mocap clips and start the idle loop; talking clips stand by for crossfade
     mixer = new THREE.AnimationMixer(vrm.scene);
@@ -368,6 +375,42 @@ export function initCompanion() {
         }
       }
       talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 5);
+
+      // --- keep her facing the viewer while talking: damp the torso's yaw twist from the clip
+      //     (the talk clips turn her ~30 deg to the side; this rotates her back toward front) ---
+      if (talk > 0.01) {
+        const damp = 1 - 0.6 * talk;
+        const hipsT = B('hips'), spineT = B('spine'), chestT = B('chest') || B('upperChest'), neckT = B('neck');
+        if (hipsT) hipsT.rotation.y *= damp;
+        if (spineT) spineT.rotation.y *= damp;
+        if (chestT) chestT.rotation.y *= damp;
+        if (neckT) neckT.rotation.y *= damp;
+      }
+
+      // --- idle weight-shift: a slow lean layered on the mocap so she sways foot-to-foot when quiet ---
+      const idleAmt = 1 - Math.min(1, talk * 2);
+      if (idleAmt > 0.01) {
+        const sway = Math.sin(t * 0.5), sway2 = Math.sin(t * 0.33 + 1);
+        const hips = B('hips'), spine = B('spine'), head = B('head');
+        if (hips) hips.rotation.z += sway * 0.055 * idleAmt;
+        if (spine) spine.rotation.z += -sway * 0.03 * idleAmt;
+        if (head) head.rotation.z += sway2 * 0.025 * idleAmt;
+      }
+
+      // --- eyes: drift the lookAt target around, mostly toward the viewer, with occasional glances ---
+      if (eyeTarget) {
+        eyeTimer -= dt;
+        if (eyeTimer <= 0) {
+          const glanceAway = Math.random() < 0.3;
+          eyeGoal.set(
+            (Math.random() * 2 - 1) * (glanceAway ? 2.4 : 1.0),
+            1.2 + (Math.random() * 2 - 1) * (glanceAway ? 0.5 : 0.25),
+            3,
+          );
+          eyeTimer = 0.8 + Math.random() * 2.2;
+        }
+        eyeTarget.position.lerp(eyeGoal, Math.min(1, dt * 3));
+      }
 
       // --- expressions ride on top of the mocap (separate from the skeleton, so no conflict) ---
       // gentle near-constant smile that brightens when talking
