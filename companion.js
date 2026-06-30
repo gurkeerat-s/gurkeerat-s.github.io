@@ -177,10 +177,10 @@ export function initCompanion() {
       HOME_X = 0.55;
       camera.position.set(0, 1.5, 6.8);   // aim higher -> she drops lower in frame, standing near the chat box
       camera.lookAt(0, 1.5, 0);
-    } else {                             // desktop: docked to the right, aimed lower so the ground + shadow show under her feet (no floating)
+    } else {                             // desktop: docked to the right, feet near the bottom edge so there's no empty void below her (reads as grounded)
       HOME_X = 1.0;
-      camera.position.set(0, 0.82, 3.6);
-      camera.lookAt(0, 0.72, 0);
+      camera.position.set(0, 0.92, 3.5);
+      camera.lookAt(0, 0.92, 0);
     }
     camera.updateProjectionMatrix();
   }
@@ -197,7 +197,11 @@ export function initCompanion() {
   const eyeGoal = new THREE.Vector3(0, 1.3, 3);
   // idle weight-shift (eases foot-to-foot) + a base yaw so she angles toward the viewer/content on the left
   let weightTimer = 1.5, weightSide = 1, weightPos = 0;
-  const FACE_YAW = 0.42;
+  const FACE_YAW = -0.42;
+  // foot-grounding: drop the whole model so her lowest sole sits on the shadow plane (no floating)
+  let groundOffset = 0;
+  const SOLE_CLEAR = 0.085;            // ankle-bone height above the sole
+  const _footA = new THREE.Vector3(), _footB = new THREE.Vector3();
   function fadeTo(action, dur = 0.45) {
     if (!action || action === currentAction) return;
     if (currentAction) currentAction.fadeOut(dur);
@@ -430,7 +434,7 @@ export function initCompanion() {
       vrm.expressionManager?.setValue('aa', mouth);
 
       vrm.scene.position.x = HOME_X;
-      vrm.scene.position.y = 0;
+      vrm.scene.position.y = groundOffset;
       vrm.scene.rotation.y = baseY + FACE_YAW;   // angle her toward the viewer/content on the left
       shadow.position.x = HOME_X;
 
@@ -445,6 +449,17 @@ export function initCompanion() {
       }
 
       vrm.update(dt);
+
+      // ground her: after the pose is final, measure the lowest foot and ease the whole model down/up
+      // so her sole rests on the shadow plane (kills any floating, for any clip)
+      const lFoot = vrm.humanoid?.getRawBoneNode?.('leftFoot'), rFoot = vrm.humanoid?.getRawBoneNode?.('rightFoot');
+      if (lFoot && rFoot) {
+        vrm.scene.updateMatrixWorld(true);
+        lFoot.getWorldPosition(_footA); rFoot.getWorldPosition(_footB);
+        const lowest = Math.min(_footA.y, _footB.y);
+        const target = groundOffset + (SOLE_CLEAR - lowest);
+        groundOffset += (target - groundOffset) * Math.min(1, dt * 5);
+      }
 
       // speech bubble: auto-cycle lines, unless a chat reply is being held
       lineTimer -= dt;
