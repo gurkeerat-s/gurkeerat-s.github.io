@@ -177,10 +177,10 @@ export function initCompanion() {
       HOME_X = 0.55;
       camera.position.set(0, 1.5, 6.8);   // aim higher -> she drops lower in frame, standing near the chat box
       camera.lookAt(0, 1.5, 0);
-    } else {                             // desktop: docked to the right, feet near the bottom edge so there's no empty void below her (reads as grounded)
+    } else {                             // desktop: docked to the right, soles right at the bottom edge so there's no void below her
       HOME_X = 1.0;
-      camera.position.set(0, 0.92, 3.5);
-      camera.lookAt(0, 0.92, 0);
+      camera.position.set(0, 0.95, 3.5);
+      camera.lookAt(0, 0.95, 0);
     }
     camera.updateProjectionMatrix();
   }
@@ -200,7 +200,7 @@ export function initCompanion() {
   const FACE_YAW = -0.42;
   // foot-grounding: drop the whole model so her lowest sole sits on the shadow plane (no floating)
   let groundOffset = 0;
-  const SOLE_CLEAR = 0.085;            // ankle-bone height above the sole
+  const SOLE_CLEAR = 0.02;             // plant the lowest foot ~on the floor (small ankle clearance)
   const _footA = new THREE.Vector3(), _footB = new THREE.Vector3();
   function fadeTo(action, dur = 0.45) {
     if (!action || action === currentAction) return;
