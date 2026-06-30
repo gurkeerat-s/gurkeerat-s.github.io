@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Talk to Gurkeerat's AI</title>
+<meta name="description" content="A real-time voice AI companion — talk to it out loud. Built by Gurkeerat Sappal." />
+<style>
+  :root{ --bg:#fafaf7; --fg:#0a0a08; --muted:#57574f; --line:rgba(10,10,8,.12); --accent:#15803d; }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--fg);
+    background:radial-gradient(1200px 600px at 50% -10%, #fff 0%, var(--bg) 60%);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column; min-height:100%;
+  }
+  a{color:inherit}
+  header{padding:18px 24px; display:flex; align-items:center; gap:14px; font-size:14px}
+  header .back{color:var(--muted); text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px}
+  header .back:hover{color:var(--accent); border-color:var(--accent)}
+  header .spacer{flex:1}
+  header .tag{font-size:12px; color:var(--muted)}
+  main{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:0 16px}
+  h1{font-size:24px; font-weight:700; letter-spacing:-.02em; margin:6px 0 2px; text-align:center}
+  .sub{color:var(--muted); font-size:14px; margin:0 0 4px; text-align:center; max-width:38ch}
+  #stage{position:relative; width:min(420px,92vw); height:min(460px,52vh)}
+  #canvas{width:100%; height:100%; display:block}
+  #status{position:absolute; left:50%; bottom:6px; transform:translateX(-50%);
+    font-size:13px; color:var(--muted); white-space:nowrap}
+  #timer{position:absolute; right:8px; top:8px; font-size:13px; color:var(--muted);
+    font-variant-numeric:tabular-nums}
+  .bubbles{width:min(560px,94vw); min-height:54px; margin:2px 0 10px}
+  .row{font-size:15px; line-height:1.4; margin:4px 0; opacity:0; transition:opacity .25s}
+  .row.show{opacity:1}
+  .row .who{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-right:6px}
+  .row.you{color:var(--muted)}
+  .controls{display:flex; flex-direction:column; align-items:center; gap:10px; padding-bottom:28px}
+  #mic{font:inherit; font-size:15px; font-weight:600; padding:13px 26px; border-radius:999px; cursor:pointer;
+    border:none; background:var(--accent); color:#fff; box-shadow:0 8px 24px rgba(21,128,61,.28)}
+  #mic:hover{filter:brightness(1.05)}
+  #mic.live{background:#b91c1c; box-shadow:0 8px 24px rgba(185,28,28,.28)}
+  #mic:disabled{opacity:.55; cursor:default}
+  .typerow{display:flex; gap:8px; width:min(560px,94vw)}
+  .typerow input{flex:1; font:inherit; font-size:14px; padding:10px 14px; border-radius:999px;
+    border:1px solid var(--line); background:#fff; color:var(--fg); outline:none}
+  .typerow input:focus{border-color:var(--accent)}
+  .typerow button{font:inherit; font-size:14px; padding:10px 16px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--line); background:#fff}
+  .note{font-size:12px; color:var(--muted); text-align:center; max-width:46ch; margin:2px auto 0}
+</style>
+</head>
+<body>
+  <header>
+    <a class="back" href="./">← back to portfolio</a>
+    <span class="spacer"></span>
+    <span class="tag">prototype · ~1 min demo</span>
+  </header>
+
+  <main>
+    <h1>say hi to gurkeerat's AI 🎙️</h1>
+    <p class="sub">tap the mic and talk out loud — she answers back. (best in chrome on desktop; you can also type below)</p>
+
+    <div id="stage">
+      <canvas id="canvas"></canvas>
+      <div id="timer"></div>
+      <div id="status">tap “start talking” to begin</div>
+    </div>
+
+    <div class="bubbles">
+      <div class="row you" id="row-you"><span class="who">you</span><span id="you-text"></span></div>
+      <div class="row" id="row-her"><span class="who">aria</span><span id="her-text"></span></div>
+    </div>
+
+    <div class="controls">
+      <button id="mic">🎤 start talking</button>
+      <div class="typerow">
+        <input id="type" type="text" autocomplete="off" maxlength="200" placeholder="…or type a message and hit enter" />
+        <button id="send">send</button>
+      </div>
+      <p class="note">a quick demo, capped at ~60s per session. it runs on Claude Haiku via a Cloudflare Worker; the voice is your browser's built-in TTS.</p>
+    </div>
+  </main>
+
+<script type="module">
+import * as THREE from 'https://esm.sh/three@0.170.0';
+import { GLTFLoader } from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from 'https://esm.sh/@pixiv/three-vrm@3.4.0?deps=three@0.170.0';
+
+const WORKER = 'https://companion-chat.gurkeeratsappal.workers.dev';
+const SESSION_SECS = 60;
+
+// ---- elements ----
+const canvas = document.getElementById('canvas');
+const statusEl = document.getElementById('status');
+const timerEl = document.getElementById('timer');
+const micBtn = document.getElementById('mic');
+const typeInput = document.getElementById('type');
+const sendBtn = document.getElementById('send');
+const youText = document.getElementById('you-text');
+const herText = document.getElementById('her-text');
+const rowYou = document.getElementById('row-you');
+const rowHer = document.getElementById('row-her');
+
+function setStatus(t){ statusEl.textContent = t; }
+function showYou(t){ youText.textContent = t; rowYou.classList.add('show'); }
+function showHer(t){ herText.textContent = t; rowHer.classList.add('show'); }
+
+// ---- three.js + VRM ----
+const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 50);
+camera.position.set(0, 1.32, 1.55); camera.lookAt(0, 1.28, 0);   // head + shoulders
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const key = new THREE.DirectionalLight(0xfff5ec, 1.0); key.position.set(2,3,2); scene.add(key);
+const fill = new THREE.DirectionalLight(0xdce4ff, 0.4); fill.position.set(-2,1,1.5); scene.add(fill);
+
+function resize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas); resize();
+
+let vrm=null, baseY=0, t=0, blinkTimer=2, blinkPhase=0, speaking=false;
+const B = n => vrm?.humanoid?.getNormalizedBoneNode(n);
+
+const loader = new GLTFLoader();
+loader.register(p => new VRMLoaderPlugin(p));
+loader.load('avatar.vrm', g => {
+  vrm = g.userData.vrm;
+  VRMUtils.removeUnnecessaryVertices(g.scene);
+  VRMUtils.combineSkeletons(g.scene);
+  VRMUtils.rotateVRM0(vrm);
+  baseY = vrm.scene.rotation.y;
+  scene.add(vrm.scene);
+}, undefined, e => { console.error('avatar load failed', e); setStatus("couldn't load the avatar 😣"); });
+
+const clock = new THREE.Clock();
+(function loop(){
+  requestAnimationFrame(loop);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (vrm){
+    t += dt;
+    const breathe = Math.sin(t*1.5);
+    const spine=B('spine'); if(spine){ spine.rotation.x=breathe*0.03; spine.rotation.z=Math.sin(t*0.6)*0.025; }
+    const chest=B('chest')||B('upperChest'); if(chest) chest.rotation.x=breathe*0.02;
+    const neck=B('neck'); if(neck) neck.rotation.y=Math.sin(t*0.5)*0.06;
+    const head=B('head'); if(head){ head.rotation.y=Math.sin(t*0.5)*0.12; head.rotation.x=Math.sin(t*0.4)*0.05; }
+    const lUA=B('leftUpperArm'), rUA=B('rightUpperArm');
+    if(lUA){ lUA.rotation.z=1.42+Math.sin(t*0.8)*0.04; } if(rUA){ rUA.rotation.z=-1.42-Math.sin(t*0.8+0.6)*0.04; }
+    vrm.scene.position.y = breathe*0.015;
+    vrm.scene.rotation.y = baseY;
+
+    // blink
+    blinkTimer-=dt;
+    if(blinkTimer<=0 && blinkPhase===0) blinkPhase=0.0001;
+    if(blinkPhase>0){ blinkPhase+=dt;
+      const v = blinkPhase<0.07 ? blinkPhase/0.07 : blinkPhase<0.14 ? 1-(blinkPhase-0.07)/0.07 : 0;
+      vrm.expressionManager?.setValue('blink', Math.max(0,Math.min(1,v)));
+      if(blinkPhase>=0.14){ blinkPhase=0; blinkTimer=2+Math.random()*3; } }
+
+    // lip-sync: open/close the mouth while speaking
+    const mouth = speaking ? (0.18 + 0.22*(Math.sin(t*13)*0.5+0.5)) : 0;
+    vrm.expressionManager?.setValue('aa', mouth);
+    vrm.expressionManager?.setValue('happy', speaking ? 0.25 : 0.12);
+
+    vrm.update(dt);
+  }
+  renderer.render(scene, camera);
+})();
+
+// ---- speech synthesis (her voice) ----
+let voice=null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  voice = vs.find(v=>/female|samantha|karen|moira|tessa|zira|aria/i.test(v.name) && /en/i.test(v.lang))
+       || vs.find(v=>/en-US/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || vs[0] || null;
+}
+pickVoice(); speechSynthesis.onvoiceschanged = pickVoice;
+
+function speak(text){
+  return new Promise(res=>{
+    if(!('speechSynthesis' in window)){ res(); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if(voice) u.voice = voice;
+    u.rate = 1.02; u.pitch = 1.1;
+    u.onstart = ()=>{ speaking=true; };
+    u.onend = ()=>{ speaking=false; res(); };
+    u.onerror = ()=>{ speaking=false; res(); };
+    speechSynthesis.speak(u);
+  });
+}
+
+// ---- conversation ----
+const history = [];
+let active = false, busy = false, timeLeft = SESSION_SECS, timerId = null;
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog = null, recogOn = false;
+
+function fmt(s){ const m=Math.floor(s/60), ss=String(s%60).padStart(2,'0'); return `${m}:${ss}`; }
+
+function startTimer(){
+  timeLeft = SESSION_SECS; timerEl.textContent = fmt(timeLeft);
+  timerId = setInterval(()=>{
+    timeLeft--; timerEl.textContent = fmt(Math.max(0,timeLeft));
+    if(timeLeft<=0) endSession(true);
+  },1000);
+}
+
+async function ask(text){
+  if(!active) return;
+  busy = true; stopRecog();
+  showYou(text);
+  history.push({role:'user', content:text});
+  setStatus('thinking…');
+  let reply = "sorry, i glitched — try again?";
+  try{
+    const r = await fetch(WORKER, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ messages: history.slice(-10) }) });
+    const data = await r.json();
+    if(data.reply) reply = data.reply;
+  }catch(e){ /* keep fallback */ }
+  history.push({role:'assistant', content:reply});
+  showHer(reply);
+  setStatus('speaking…');
+  await speak(reply);
+  busy = false;
+  if(active){ setStatus('listening… (just talk)'); startRecog(); }
+}
+
+// ---- mic / speech recognition ----
+function buildRecog(){
+  if(!SR) return null;
+  const r = new SR();
+  r.lang='en-US'; r.interimResults=false; r.continuous=false; r.maxAlternatives=1;
+  r.onresult = e=>{ const txt=(e.results[0][0].transcript||'').trim(); if(txt) ask(txt); };
+  r.onend = ()=>{ recogOn=false; if(active && !busy) startRecog(); };  // auto-restart between phrases
+  r.onerror = ev=>{ recogOn=false; if(ev.error==='not-allowed'){ setStatus('mic blocked — type below instead'); } };
+  return r;
+}
+function startRecog(){ if(!recog || recogOn || busy || !active) return; try{ recog.start(); recogOn=true; }catch(e){} }
+function stopRecog(){ if(recog && recogOn){ try{ recog.stop(); }catch(e){} recogOn=false; } }
+
+async function startSession(){
+  active = true; busy=false;
+  micBtn.textContent = '■ stop'; micBtn.classList.add('live');
+  startTimer();
+  history.length = 0;
+  recog = buildRecog();
+  const greet = "hey! i'm aria, gurkeerat's AI. ask me anything about him.";
+  showHer(greet); setStatus('speaking…');
+  await speak(greet);
+  if(!active) return;
+  if(recog){ setStatus('listening… (just talk)'); startRecog(); }
+  else { setStatus('voice input not supported here — type below'); }
+}
+
+async function endSession(timedOut){
+  active=false; stopRecog(); clearInterval(timerId); timerEl.textContent='';
+  micBtn.textContent='🎤 start again'; micBtn.classList.remove('live');
+  if(timedOut){
+    const bye = "that's the demo! if you want the full thing, reach gurkeerat at gurkeeratsappal at gmail dot com.";
+    showHer(bye); setStatus('demo over — thanks for trying it 🌸');
+    await speak(bye);
+  } else {
+    speechSynthesis.cancel(); speaking=false; setStatus('stopped — tap to start again');
+  }
+}
+
+micBtn.addEventListener('click', ()=>{ active ? endSession(false) : startSession(); });
+
+// text fallback works with or without an active session
+function sendTyped(){
+  const txt = typeInput.value.trim(); if(!txt || busy) return;
+  typeInput.value='';
+  if(!active){ active=true; micBtn.textContent='■ stop'; micBtn.classList.add('live'); startTimer(); history.length=0; recog=buildRecog(); }
+  ask(txt);
+}
+sendBtn.addEventListener('click', sendTyped);
+typeInput.addEventListener('keydown', e=>{ if(e.key==='Enter') sendTyped(); });
+</script>
+</body>
+</html>
