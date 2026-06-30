@@ -7,6 +7,11 @@
 const ALLOWED_ORIGIN = "https://gurkeerat-s.github.io";
 const MODEL = "claude-haiku-4-5";
 
+// ElevenLabs voice. Swap this for any voice id from your ElevenLabs dashboard (Voices -> ... -> Copy voice ID).
+// Default: "Rachel" (warm female). Other nice ones: Bella EXAVITQu4vr4xnSDxMaL, Elli MF3mGyEYCl7XYWbV9V6O.
+const VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+const TTS_MODEL = "eleven_flash_v2_5"; // lowest-latency model
+
 const SYSTEM = `You are Aria, Gurkeerat Sappal's friendly AI companion living on his portfolio site (gurkeerat-s.github.io). You speak out loud, so keep replies SHORT: 1-2 casual sentences, warm and natural, no markdown or lists. You are not Gurkeerat; you talk *about* him.
 
 What you know about Gurkeerat (only state what's here; if asked something you don't know, say so and point them to his work):
@@ -47,6 +52,33 @@ export default {
       body = await request.json();
     } catch {
       return json({ error: "bad json" }, 400, headers);
+    }
+
+    // --- TTS branch: { tts: "text" } -> ElevenLabs audio/mpeg ---
+    if (typeof body.tts === "string") {
+      const text = body.tts.slice(0, 500).trim();
+      if (!text) return json({ error: "empty tts" }, 400, headers);
+      const key = env.ELEVENLABS_API_KEY || env.eleven;
+      if (!key) return json({ error: "no tts key" }, 500, headers);
+      let el;
+      try {
+        el = await fetch(
+          `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?optimize_streaming_latency=2`,
+          {
+            method: "POST",
+            headers: { "xi-api-key": key, "content-type": "application/json", accept: "audio/mpeg" },
+            body: JSON.stringify({
+              text,
+              model_id: TTS_MODEL,
+              voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
+            }),
+          }
+        );
+      } catch {
+        return json({ error: "tts unreachable" }, 502, headers);
+      }
+      if (!el.ok) return json({ error: "tts error", status: el.status }, 502, headers);
+      return new Response(el.body, { status: 200, headers: { ...headers, "content-type": "audio/mpeg" } });
     }
 
     // Accept a short rolling history; cap it to keep cost + abuse bounded.

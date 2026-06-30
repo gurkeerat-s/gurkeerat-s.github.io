@@ -135,7 +135,8 @@ export function initCompanion() {
          || vs.find(v => /en-US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || vs[0] || null;
   }
   if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-  function speak(text) {
+  let audioCtx = null, analyser = null, mouthLevel = 0, realAudio = false, currentSrc = null;
+  function speakBrowser(text) {
     return new Promise(res => {
       if (!('speechSynthesis' in window)) { res(); return; }
       speechSynthesis.cancel();
@@ -147,6 +148,35 @@ export function initCompanion() {
       u.onerror = () => { speaking = false; res(); };
       speechSynthesis.speak(u);
     });
+  }
+  function playAudio(buf) {
+    return new Promise(async (res) => {
+      try {
+        if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; }
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        const audioBuf = await audioCtx.decodeAudioData(buf);
+        const src = audioCtx.createBufferSource(); src.buffer = audioBuf; currentSrc = src;
+        src.connect(analyser); analyser.connect(audioCtx.destination);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        realAudio = true; speaking = true;
+        let raf;
+        const tick = () => { analyser.getByteFrequencyData(data); let s = 0; for (let i = 2; i < 26; i++) s += data[i]; mouthLevel = Math.min(1, (s / 24) / 135); raf = requestAnimationFrame(tick); };
+        tick();
+        src.onended = () => { speaking = false; realAudio = false; mouthLevel = 0; currentSrc = null; cancelAnimationFrame(raf); res(); };
+        src.start();
+      } catch (e) { realAudio = false; res('fail'); }
+    });
+  }
+  // try the ElevenLabs voice via the worker; fall back to the browser voice if it fails
+  async function speak(text) {
+    try {
+      const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tts: text }) });
+      if (!r.ok) throw new Error('tts ' + r.status);
+      const buf = await r.arrayBuffer();
+      if (await playAudio(buf) === 'fail') await speakBrowser(text);
+    } catch (e) {
+      await speakBrowser(text);
+    }
   }
 
   // --- conversation: real Claude via the worker ---
@@ -255,8 +285,11 @@ export function initCompanion() {
         if (lLA) lLA.rotation.x += (-0.5 + Math.sin(t * 3.0) * 0.22) * talk;
         if (rLA) rLA.rotation.x += (-0.5 + Math.sin(t * 3.0 + 1.0) * 0.22) * talk;
       }
-      // lip-sync mouth + a small smile while she speaks
-      vrm.expressionManager?.setValue('aa', speaking ? (0.16 + 0.22 * (Math.sin(t * 13) * 0.5 + 0.5)) : 0);
+      // lip-sync: drive the mouth from the real audio waveform when available, else oscillate
+      const mouth = speaking
+        ? (realAudio ? Math.min(0.9, 0.08 + mouthLevel * 1.15) : (0.16 + 0.22 * (Math.sin(t * 13) * 0.5 + 0.5)))
+        : 0;
+      vrm.expressionManager?.setValue('aa', mouth);
       vrm.expressionManager?.setValue('happy', 0.18 * talk);
 
       vrm.scene.position.y = breathe * 0.02;
@@ -297,6 +330,7 @@ export function initCompanion() {
   close.onclick = () => {
     started = false;
     try { speechSynthesis.cancel(); } catch (e) {}
+    if (currentSrc) { try { currentSrc.stop(); } catch (e) {} }
     if (recog && listening) { try { recog.stop(); } catch (e) {} }
     document.documentElement.classList.remove('cmp-active');
     window.removeEventListener('resize', resize);
