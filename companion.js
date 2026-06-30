@@ -27,6 +27,11 @@ const LINES = [
 // API key server-side. See worker/companion-worker.js.
 const WORKER = 'https://companion-chat.gurkeeratsappal.workers.dev';
 
+// --- smooth value-noise: organic, non-repeating drift. Beats stacked sines (which read as robotic). ---
+function hash(n) { const s = Math.sin(n * 127.1) * 43758.5453; return (s - Math.floor(s)) * 2 - 1; }
+function noise(x) { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return hash(i) * (1 - u) + hash(i + 1) * u; }
+function fbm(x) { return noise(x) * 0.6 + noise(x * 2.1 + 5.2) * 0.3 + noise(x * 4.3 + 9.1) * 0.1; }
+
 let started = false;
 
 function injectStyles() {
@@ -118,6 +123,9 @@ export function initCompanion() {
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0, chatHold = 0;
   let speaking = false, talk = 0, busy = false;
+  // idle "look-around" beats + talking hand-gesture pulses
+  let beatTimer = 1.2, glance = { x: 0, y: 0, z: 0 }, glanceTarget = { x: 0, y: 0, z: 0 };
+  let handTimer = 1.0, handSide = 1, handAmt = 0, handTarget = 0;
   const B = (n) => vrm?.humanoid?.getNormalizedBoneNode(n);
 
   // show text in the bubble and hold it (pausing the auto-cycling idle lines)
@@ -261,36 +269,75 @@ export function initCompanion() {
     const dt = Math.min(clock.getDelta(), 0.05);
     if (vrm) {
       t += dt;
-      // light procedural idle: breathing, gentle sway, head drift, arms resting at sides
       const breathe = Math.sin(t * 1.5);
-      const spine = B('spine'); if (spine) { spine.rotation.x = breathe * 0.04; spine.rotation.z = Math.sin(t * 0.6) * 0.035; }
-      const chest = B('chest') || B('upperChest'); if (chest) chest.rotation.x = breathe * 0.025;
-      const hips = B('hips'); if (hips) hips.rotation.z = Math.sin(t * 0.7) * 0.045;
-      const neck = B('neck'); if (neck) neck.rotation.y = Math.sin(t * 0.55) * 0.08;
-      const head = B('head'); if (head) { head.rotation.y = Math.sin(t * 0.55) * 0.18; head.rotation.x = Math.sin(t * 0.42) * 0.07; head.rotation.z = Math.sin(t * 0.5) * 0.03; }
+      const spine = B('spine'), chest = B('chest') || B('upperChest'), hips = B('hips');
+      const neck = B('neck'), head = B('head');
       const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
       const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
-      if (lUA) { lUA.rotation.z = 1.42 + Math.sin(t * 0.8) * 0.05; lUA.rotation.x = Math.sin(t * 0.9) * 0.05; }
-      if (rUA) { rUA.rotation.z = -1.42 - Math.sin(t * 0.8 + 0.6) * 0.05; rUA.rotation.x = Math.sin(t * 0.9 + 0.6) * 0.05; }
-      if (lLA) lLA.rotation.x = -0.16 + Math.sin(t * 0.9) * 0.05;
-      if (rLA) rLA.rotation.x = -0.16 + Math.sin(t * 0.9 + 0.6) * 0.05;
 
-      // talking: smoothly ramp `talk`, then layer livelier head + light hand gestures on top
-      talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 6);
-      if (talk > 0.001) {
-        if (head) { head.rotation.x += Math.sin(t * 4.6) * 0.06 * talk; head.rotation.y += Math.sin(t * 2.4) * 0.10 * talk; head.rotation.z += Math.sin(t * 3.2) * 0.03 * talk; }
-        if (spine) spine.rotation.x += Math.sin(t * 2.1) * 0.02 * talk;
-        if (lUA) lUA.rotation.x += (-0.18 + Math.sin(t * 2.6) * 0.12) * talk;
-        if (rUA) rUA.rotation.x += (-0.18 + Math.sin(t * 2.6 + 0.9) * 0.12) * talk;
-        if (lLA) lLA.rotation.x += (-0.5 + Math.sin(t * 3.0) * 0.22) * talk;
-        if (rLA) rLA.rotation.x += (-0.5 + Math.sin(t * 3.0 + 1.0) * 0.22) * talk;
+      // --- organic idle drift: noise-driven weight-shift + breathing (not metronome sines) ---
+      const swayX = fbm(t * 0.18), swayZ = fbm(t * 0.15 + 13.0);
+      if (hips) { hips.rotation.z = swayX * 0.05; hips.rotation.y = swayZ * 0.04; }
+      if (spine) { spine.rotation.x = breathe * 0.04 - swayX * 0.02; spine.rotation.z = -swayX * 0.045; }
+      if (chest) chest.rotation.x = breathe * 0.025;
+
+      // --- look-around "beats": ease the gaze toward a target, repick it every few seconds ---
+      beatTimer -= dt;
+      if (beatTimer <= 0) {
+        glanceTarget.y = (Math.random() * 2 - 1) * 0.28;
+        glanceTarget.x = (Math.random() * 2 - 1) * 0.10;
+        glanceTarget.z = (Math.random() * 2 - 1) * 0.06;
+        beatTimer = 2.4 + Math.random() * 3.4;
       }
+      const ge = Math.min(1, dt * 1.8);
+      glance.x += (glanceTarget.x - glance.x) * ge;
+      glance.y += (glanceTarget.y - glance.y) * ge;
+      glance.z += (glanceTarget.z - glance.z) * ge;
+      if (neck) neck.rotation.y = glance.y * 0.35;
+      if (head) {
+        head.rotation.y = glance.y * 0.65 + fbm(t * 0.4 + 2) * 0.05;
+        head.rotation.x = glance.x + breathe * 0.015 + fbm(t * 0.5 + 7) * 0.04;
+        head.rotation.z = glance.z + fbm(t * 0.3 + 4) * 0.03;
+      }
+
+      // --- arms rest at sides (known-good z), with a touch of noise life ---
+      if (lUA) { lUA.rotation.z = 1.42 + fbm(t * 0.4) * 0.04; lUA.rotation.x = fbm(t * 0.45 + 3) * 0.04; }
+      if (rUA) { rUA.rotation.z = -1.42 - fbm(t * 0.4 + 8) * 0.04; rUA.rotation.x = fbm(t * 0.45 + 5) * 0.04; }
+      if (lLA) lLA.rotation.x = -0.16 + fbm(t * 0.5) * 0.04;
+      if (rLA) rLA.rotation.x = -0.16 + fbm(t * 0.5 + 6) * 0.04;
+
+      // --- talking layer: head comes alive + hand gestures fire in pulses (alternating sides) ---
+      talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 5);
+      if (talk > 0.001) {
+        const emph = realAudio ? mouthLevel : (Math.sin(t * 9) * 0.5 + 0.5); // nod harder on loud syllables
+        if (head) {
+          head.rotation.x += (Math.sin(t * 3.1) * 0.05 + emph * 0.06) * talk;
+          head.rotation.y += Math.sin(t * 1.9) * 0.09 * talk;
+          head.rotation.z += Math.sin(t * 2.5) * 0.03 * talk;
+        }
+        if (spine) spine.rotation.x += Math.sin(t * 2.0) * 0.02 * talk;
+
+        handTimer -= dt;
+        if (handTimer <= 0 && handTarget === 0 && handAmt < 0.05) { // fire a fresh gesture
+          handTarget = 1; handSide = -handSide; handTimer = 1.3 + Math.random() * 1.6;
+        }
+        handAmt += (handTarget - handAmt) * Math.min(1, dt * 4.5);
+        if (handTarget === 1 && handAmt > 0.82) handTarget = 0;       // raise, then settle back down
+        const g = handAmt * talk;
+        const UA = handSide < 0 ? lUA : rUA, LA = handSide < 0 ? lLA : rLA;
+        if (UA) UA.rotation.x += -0.5 * g;   // lift upper arm forward
+        if (LA) LA.rotation.x += -0.85 * g;  // bend forearm up — a gesticulation
+        const oUA = handSide < 0 ? rUA : lUA, oLA = handSide < 0 ? rLA : lLA; // light life in the other arm
+        if (oUA) oUA.rotation.x += -0.12 * g;
+        if (oLA) oLA.rotation.x += -0.3 * g;
+      }
+
       // lip-sync: drive the mouth from the real audio waveform when available, else oscillate
       const mouth = speaking
         ? (realAudio ? Math.min(0.9, 0.08 + mouthLevel * 1.15) : (0.16 + 0.22 * (Math.sin(t * 13) * 0.5 + 0.5)))
         : 0;
       vrm.expressionManager?.setValue('aa', mouth);
-      vrm.expressionManager?.setValue('happy', 0.18 * talk);
+      vrm.expressionManager?.setValue('happy', 0.16 * talk);
 
       vrm.scene.position.y = breathe * 0.02;
       vrm.scene.position.x = HOME_X;
