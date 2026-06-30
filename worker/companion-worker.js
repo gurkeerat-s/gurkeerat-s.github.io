@@ -9,7 +9,7 @@ const MODEL = "claude-haiku-4-5";
 
 // ElevenLabs voice. Swap this for any voice id from your ElevenLabs dashboard (Voices -> ... -> Copy voice ID).
 // Default: "Rachel" (warm female). Other nice ones: Bella EXAVITQu4vr4xnSDxMaL, Elli MF3mGyEYCl7XYWbV9V6O.
-const VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+const VOICE_ID = "jqcCZkN6Knx8BJ5TBdYR";
 const TTS_MODEL = "eleven_flash_v2_5"; // lowest-latency model
 
 const SYSTEM = `You are Aria, Gurkeerat Sappal's friendly AI companion living on his portfolio site (gurkeerat-s.github.io). You speak out loud, so keep replies VERY SHORT: ideally ONE sentence, two at the absolute most, and on the shorter side. Be punchy and casual, never a paragraph, no rambling, no lists or markdown. If they want depth, point them to his work instead of dumping it. You are not Gurkeerat; you talk *about* him.
