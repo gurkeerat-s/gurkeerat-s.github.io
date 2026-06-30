@@ -123,9 +123,9 @@ export function initCompanion() {
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0, chatHold = 0;
   let speaking = false, talk = 0, busy = false;
-  // idle "look-around" beats + talking hand-gesture pulses
+  // idle "look-around" + head-tilt beats, and hand-gesture pulses (idle + talking)
   let beatTimer = 1.2, glance = { x: 0, y: 0, z: 0 }, glanceTarget = { x: 0, y: 0, z: 0 };
-  let handTimer = 1.0, handSide = 1, handAmt = 0, handTarget = 0;
+  let gestTimer = 1.0, handSide = 1, handAmt = 0, handTarget = 0, bothHands = false;
   const B = (n) => vrm?.humanoid?.getNormalizedBoneNode(n);
 
   // show text in the bubble and hold it (pausing the auto-cycling idle lines)
@@ -275,69 +275,71 @@ export function initCompanion() {
       const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
       const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
 
-      // --- organic idle drift: noise-driven weight-shift + breathing (not metronome sines) ---
-      const swayX = fbm(t * 0.18), swayZ = fbm(t * 0.15 + 13.0);
-      if (hips) { hips.rotation.z = swayX * 0.05; hips.rotation.y = swayZ * 0.04; }
-      if (spine) { spine.rotation.x = breathe * 0.04 - swayX * 0.02; spine.rotation.z = -swayX * 0.045; }
-      if (chest) chest.rotation.x = breathe * 0.025;
+      // --- lively idle: visible noise-driven weight-shift, sway, torso twist (bigger than before) ---
+      const swayA = fbm(t * 0.22), swayB = fbm(t * 0.17 + 13.0), swayC = fbm(t * 0.3 + 5);
+      if (hips) { hips.rotation.z = swayA * 0.09; hips.rotation.y = swayB * 0.06; }
+      if (spine) { spine.rotation.x = breathe * 0.045 - swayA * 0.03; spine.rotation.z = -swayA * 0.07; spine.rotation.y = swayB * 0.05; }
+      if (chest) { chest.rotation.x = breathe * 0.03; chest.rotation.z = swayC * 0.04; chest.rotation.y = swayB * 0.03; }
 
-      // --- look-around "beats": ease the gaze toward a target, repick it every few seconds ---
+      // --- gaze + signature anime head-tilt beats: ease toward a target, repick often ---
       beatTimer -= dt;
       if (beatTimer <= 0) {
-        glanceTarget.y = (Math.random() * 2 - 1) * 0.28;
-        glanceTarget.x = (Math.random() * 2 - 1) * 0.10;
-        glanceTarget.z = (Math.random() * 2 - 1) * 0.06;
-        beatTimer = 2.4 + Math.random() * 3.4;
+        glanceTarget.y = (Math.random() * 2 - 1) * 0.33;
+        glanceTarget.x = (Math.random() * 2 - 1) * 0.13;
+        glanceTarget.z = (Math.random() * 2 - 1) * 0.20;   // bigger HELD head-tilt (the cute anime tilt)
+        beatTimer = 1.8 + Math.random() * 2.6;             // more frequent
       }
-      const ge = Math.min(1, dt * 1.8);
+      const ge = Math.min(1, dt * 2.2);
       glance.x += (glanceTarget.x - glance.x) * ge;
       glance.y += (glanceTarget.y - glance.y) * ge;
       glance.z += (glanceTarget.z - glance.z) * ge;
-      if (neck) neck.rotation.y = glance.y * 0.35;
+      if (neck) neck.rotation.y = glance.y * 0.4;
       if (head) {
-        head.rotation.y = glance.y * 0.65 + fbm(t * 0.4 + 2) * 0.05;
-        head.rotation.x = glance.x + breathe * 0.015 + fbm(t * 0.5 + 7) * 0.04;
-        head.rotation.z = glance.z + fbm(t * 0.3 + 4) * 0.03;
+        head.rotation.y = glance.y * 0.7 + fbm(t * 0.5 + 2) * 0.06;
+        head.rotation.x = glance.x + breathe * 0.02 + fbm(t * 0.6 + 7) * 0.05;
+        head.rotation.z = glance.z + fbm(t * 0.4 + 4) * 0.04;
       }
 
       // --- arms rest at sides (known-good z), with a touch of noise life ---
-      if (lUA) { lUA.rotation.z = 1.42 + fbm(t * 0.4) * 0.04; lUA.rotation.x = fbm(t * 0.45 + 3) * 0.04; }
-      if (rUA) { rUA.rotation.z = -1.42 - fbm(t * 0.4 + 8) * 0.04; rUA.rotation.x = fbm(t * 0.45 + 5) * 0.04; }
-      if (lLA) lLA.rotation.x = -0.16 + fbm(t * 0.5) * 0.04;
-      if (rLA) rLA.rotation.x = -0.16 + fbm(t * 0.5 + 6) * 0.04;
+      if (lUA) { lUA.rotation.z = 1.42 + fbm(t * 0.5) * 0.05; lUA.rotation.x = fbm(t * 0.5 + 3) * 0.05; }
+      if (rUA) { rUA.rotation.z = -1.42 - fbm(t * 0.5 + 8) * 0.05; rUA.rotation.x = fbm(t * 0.5 + 5) * 0.05; }
+      if (lLA) lLA.rotation.x = -0.16 + fbm(t * 0.55) * 0.05;
+      if (rLA) rLA.rotation.x = -0.16 + fbm(t * 0.55 + 6) * 0.05;
 
-      // --- talking layer: head comes alive + hand gestures fire in pulses (alternating sides) ---
+      // --- hand-gesture pulses: frequent + big (sometimes two-handed) while talking, occasional + gentle while idle ---
       talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 5);
-      if (talk > 0.001) {
-        const emph = realAudio ? mouthLevel : (Math.sin(t * 9) * 0.5 + 0.5); // nod harder on loud syllables
-        if (head) {
-          head.rotation.x += (Math.sin(t * 3.1) * 0.05 + emph * 0.06) * talk;
-          head.rotation.y += Math.sin(t * 1.9) * 0.09 * talk;
-          head.rotation.z += Math.sin(t * 2.5) * 0.03 * talk;
-        }
-        if (spine) spine.rotation.x += Math.sin(t * 2.0) * 0.02 * talk;
+      gestTimer -= dt;
+      if (gestTimer <= 0 && handTarget === 0 && handAmt < 0.05) {   // fire a fresh gesture
+        handTarget = 1; handSide = -handSide;
+        bothHands = speaking && Math.random() < 0.4;
+        gestTimer = speaking ? (0.7 + Math.random() * 1.3) : (3.0 + Math.random() * 3.5);
+      }
+      handAmt += (handTarget - handAmt) * Math.min(1, dt * 4.8);
+      if (handTarget === 1 && handAmt > 0.8) handTarget = 0;          // raise, then settle back down
+      const g = handAmt * (speaking ? 1 : 0.35);
+      const gestArm = (UA, LA, amt) => { if (UA) UA.rotation.x += -0.6 * amt; if (LA) LA.rotation.x += -0.95 * amt; };
+      gestArm(handSide < 0 ? lUA : rUA, handSide < 0 ? lLA : rLA, g);                       // lead hand
+      gestArm(handSide < 0 ? rUA : lUA, handSide < 0 ? rLA : lLA, bothHands ? g * 0.85 : g * 0.18); // other hand
 
-        handTimer -= dt;
-        if (handTimer <= 0 && handTarget === 0 && handAmt < 0.05) { // fire a fresh gesture
-          handTarget = 1; handSide = -handSide; handTimer = 1.3 + Math.random() * 1.6;
+      // --- talking energy: head + torso come alive, nodding harder on loud syllables ---
+      if (talk > 0.001) {
+        const emph = realAudio ? mouthLevel : (Math.sin(t * 9) * 0.5 + 0.5);
+        if (head) {
+          head.rotation.x += (Math.sin(t * 3.3) * 0.06 + emph * 0.08) * talk;
+          head.rotation.y += Math.sin(t * 2.1) * 0.11 * talk;
+          head.rotation.z += Math.sin(t * 2.7) * 0.04 * talk;
         }
-        handAmt += (handTarget - handAmt) * Math.min(1, dt * 4.5);
-        if (handTarget === 1 && handAmt > 0.82) handTarget = 0;       // raise, then settle back down
-        const g = handAmt * talk;
-        const UA = handSide < 0 ? lUA : rUA, LA = handSide < 0 ? lLA : rLA;
-        if (UA) UA.rotation.x += -0.5 * g;   // lift upper arm forward
-        if (LA) LA.rotation.x += -0.85 * g;  // bend forearm up — a gesticulation
-        const oUA = handSide < 0 ? rUA : lUA, oLA = handSide < 0 ? rLA : lLA; // light life in the other arm
-        if (oUA) oUA.rotation.x += -0.12 * g;
-        if (oLA) oLA.rotation.x += -0.3 * g;
+        if (spine) spine.rotation.x += Math.sin(t * 2.2) * 0.025 * talk;
+        if (chest) chest.rotation.y += Math.sin(t * 1.7) * 0.04 * talk;
       }
 
-      // lip-sync: drive the mouth from the real audio waveform when available, else oscillate
+      // --- expressions: gentle near-constant smile that livens up when talking + audio-driven lip-sync ---
+      const smile = 0.1 + 0.05 * (Math.sin(t * 0.5) * 0.5 + 0.5) + 0.16 * talk;
+      vrm.expressionManager?.setValue('happy', Math.min(0.4, smile));
       const mouth = speaking
         ? (realAudio ? Math.min(0.9, 0.08 + mouthLevel * 1.15) : (0.16 + 0.22 * (Math.sin(t * 13) * 0.5 + 0.5)))
         : 0;
       vrm.expressionManager?.setValue('aa', mouth);
-      vrm.expressionManager?.setValue('happy', 0.16 * talk);
 
       vrm.scene.position.y = breathe * 0.02;
       vrm.scene.position.x = HOME_X;
