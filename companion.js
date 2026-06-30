@@ -195,6 +195,9 @@ export function initCompanion() {
   // living eyes: a lookAt target that darts around, mostly toward the viewer
   let eyeTarget = null, eyeTimer = 0.5;
   const eyeGoal = new THREE.Vector3(0, 1.3, 3);
+  // idle weight-shift (eases foot-to-foot) + a base yaw so she angles toward the viewer/content on the left
+  let weightTimer = 1.5, weightSide = 1, weightPos = 0;
+  const FACE_YAW = 0.42;
   function fadeTo(action, dur = 0.45) {
     if (!action || action === currentAction) return;
     if (currentAction) currentAction.fadeOut(dur);
@@ -387,14 +390,18 @@ export function initCompanion() {
         if (neckT) neckT.rotation.y *= damp;
       }
 
-      // --- idle weight-shift: a clear slow sway layered on the mocap so she shifts foot-to-foot when quiet ---
+      // --- idle weight-shift: actually shift weight foot-to-foot (ease to one side, hold, switch) ---
       const idleAmt = 1 - Math.min(1, talk * 2);
       if (idleAmt > 0.01) {
-        const sway = Math.sin(t * 0.55), sway2 = Math.sin(t * 0.37 + 1);
-        const hips = B('hips'), spine = B('spine'), head = B('head');
-        if (hips) hips.rotation.z += sway * 0.1 * idleAmt;
-        if (spine) spine.rotation.z += -sway * 0.055 * idleAmt;
-        if (head) { head.rotation.z += sway2 * 0.045 * idleAmt; head.rotation.y += sway2 * 0.07 * idleAmt; }
+        weightTimer -= dt;
+        if (weightTimer <= 0) { weightSide = -weightSide; weightTimer = 2.4 + Math.random() * 2.2; }
+        weightPos += (weightSide - weightPos) * Math.min(1, dt * 1.4);   // ease toward the planted foot
+        const bob = Math.sin(t * 1.6) * 0.5 + 0.5;                        // gentle breathing overlay
+        const hips = B('hips'), spine = B('spine'), chest = B('chest') || B('upperChest'), head = B('head');
+        if (hips) { hips.rotation.z += weightPos * 0.14 * idleAmt; hips.rotation.x += bob * 0.015 * idleAmt; }
+        if (spine) spine.rotation.z += -weightPos * 0.07 * idleAmt;
+        if (chest) chest.rotation.z += -weightPos * 0.04 * idleAmt;
+        if (head) { head.rotation.z += -weightPos * 0.05 * idleAmt; head.rotation.y += weightPos * 0.08 * idleAmt; }
       }
 
       // --- eyes: drift the lookAt target around, mostly toward the viewer, with occasional glances ---
@@ -424,7 +431,7 @@ export function initCompanion() {
 
       vrm.scene.position.x = HOME_X;
       vrm.scene.position.y = 0;
-      vrm.scene.rotation.y = baseY;
+      vrm.scene.rotation.y = baseY + FACE_YAW;   // angle her toward the viewer/content on the left
       shadow.position.x = HOME_X;
 
       // blink
