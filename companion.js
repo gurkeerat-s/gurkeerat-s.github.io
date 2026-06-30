@@ -177,10 +177,10 @@ export function initCompanion() {
       HOME_X = 0.55;
       camera.position.set(0, 1.5, 6.8);   // aim higher -> she drops lower in frame, standing near the chat box
       camera.lookAt(0, 1.5, 0);
-    } else {                             // desktop: docked to the right, soles right at the bottom edge so there's no void below her
+    } else {                             // desktop: docked to the right, with a strip of ground + shadow visible under her feet
       HOME_X = 1.0;
-      camera.position.set(0, 0.95, 3.5);
-      camera.lookAt(0, 0.95, 0);
+      camera.position.set(0, 0.86, 3.5);
+      camera.lookAt(0, 0.80, 0);
     }
     camera.updateProjectionMatrix();
   }
@@ -312,17 +312,19 @@ export function initCompanion() {
     try { recog.start(); } catch (e) {}
   });
 
-  // soft contact shadow so she's grounded, not floating
+  // contact "ground" under her feet so she reads as standing, not floating. The texture is white; we
+  // tint it per theme each frame (a soft light pool on the dark theme, a dark shadow on the light theme),
+  // because a black shadow is invisible against the dark page.
   const shCanvas = document.createElement('canvas'); shCanvas.width = shCanvas.height = 128;
   const shCtx = shCanvas.getContext('2d');
-  const grd = shCtx.createRadialGradient(64, 64, 3, 64, 64, 60);
-  grd.addColorStop(0, 'rgba(0,0,0,0.45)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  const grd = shCtx.createRadialGradient(64, 64, 2, 64, 64, 62);
+  grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.5, 'rgba(255,255,255,0.5)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
   shCtx.fillStyle = grd; shCtx.fillRect(0, 0, 128, 128);
   const shadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.15, 0.62),
+    new THREE.PlaneGeometry(1.35, 0.7),
     new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shCanvas), transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.set(HOME_X, 0.01, 0.06);
+  shadow.position.set(HOME_X, 0.005, 0.05);
   scene.add(shadow);
 
   const loader = new GLTFLoader();
@@ -430,9 +432,13 @@ export function initCompanion() {
       vrm.expressionManager?.setValue('aa', mouth);
 
       vrm.scene.position.x = HOME_X;
-      vrm.scene.position.y = 0;                   // fixed: she stays planted (no per-frame chasing = no bobbing)
+      vrm.scene.position.y = -0.06;               // fixed drop so her feet rest on the shadow (no per-frame chasing = no bobbing)
       vrm.scene.rotation.y = baseY + FACE_YAW;   // angle her toward the viewer/content on the left
       shadow.position.x = HOME_X;
+      // tint the ground per theme so it's actually visible (light pool on dark page, dark shadow on light page)
+      const darkTheme = document.documentElement.classList.contains('dark');
+      shadow.material.color.setHex(darkTheme ? 0xbfe0ff : 0x000000);
+      shadow.material.opacity = darkTheme ? 0.11 : 0.22;
 
       // blink
       blinkTimer -= dt;
