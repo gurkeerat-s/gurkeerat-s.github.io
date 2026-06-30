@@ -7,21 +7,21 @@ import { FBXLoader } from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/FBX
 import { VRMLoaderPlugin, VRMUtils } from 'https://esm.sh/@pixiv/three-vrm@3.4.0?deps=three@0.170.0';
 
 const LINES = [
-  "hi! i'm gurkeerat's AI companion 🌸",
-  "his projects are up there, scroll up 👆",
-  "he's after an AI/ML internship 👀",
+  "hi! i'm gurkeerat's AI companion",
+  "his projects are up there, scroll up",
+  "he's after an AI/ML internship",
   "fine-tuned voice models, LLM agents, the works",
-  "wanna reach him? his email's at the bottom 💌",
-  "that voice agent? he fine-tuned and self-hosts it 🎙️",
-  "Saleable's a whole suite of AI agents he shipped 🏠",
-  "he ships end-to-end: model → backend → frontend → deployed ⚡",
-  "cs · stats · math @ UofT, if you were wondering 🎓",
-  "Toronto-based, but happy to work remote too 🇨🇦",
-  "honestly he'll out-build the résumé, give him a shot 😤",
-  "i'm the AI companion he built for his site 😌",
-  "still here? he's genuinely worth a reply 💌",
-  "he builds AI agents, so yeah, i'm kind of the demo 😏",
-  "type below to ask me anything about him 💬",
+  "wanna reach him? his email's at the bottom",
+  "that voice agent? he fine-tuned and self-hosts it",
+  "Saleable's a whole suite of AI agents he shipped",
+  "he ships end-to-end: model, backend, frontend, deployed",
+  "cs, stats, math @ UofT, if you were wondering",
+  "Toronto-based, but happy to work remote too",
+  "honestly he'll out-build the résumé, give him a shot",
+  "i'm the AI companion he built for his site",
+  "still here? he's genuinely worth a reply",
+  "he builds AI agents, so yeah, i'm kind of the demo",
+  "type below to ask me anything about him",
 ];
 
 // Her "brain" is a tiny Cloudflare Worker that proxies to Claude (Haiku), holding the
@@ -313,7 +313,7 @@ export function initCompanion() {
 
   function listenTurn() {
     if (!convoActive) return;
-    if (Date.now() >= convoDeadline) { stopConvo(); showBubble("mic timed out 🙂 tap me to talk again"); return; }
+    if (Date.now() >= convoDeadline) { stopConvo(); showBubble("mic timed out, tap me to talk again"); return; }
     recog = new SR(); recog.lang = 'en-US'; recog.interimResults = false; recog.continuous = false; recog.maxAlternatives = 1;
     let handled = false;
     recog.onresult = (e) => {
@@ -330,13 +330,13 @@ export function initCompanion() {
   }
 
   micBtn.addEventListener('click', () => {
-    if (!SR) { showBubble("voice input works best in chrome 😅 just type to me!"); return; }
-    if (convoActive) { stopConvo(); showBubble("okay, mic off 🙂"); return; }
+    if (!SR) { showBubble("voice input works best in chrome, just type to me!"); return; }
+    if (convoActive) { stopConvo(); showBubble("okay, mic off"); return; }
     convoActive = true; convoDeadline = Date.now() + CONVO_MS;
-    convoTimer = setTimeout(() => { stopConvo(); showBubble("mic timed out 🙂 tap me to talk again"); }, CONVO_MS);
+    convoTimer = setTimeout(() => { stopConvo(); showBubble("mic timed out, tap me to talk again"); }, CONVO_MS);
     micBtn.classList.add('live');
     try { speechSynthesis.cancel(); } catch (e) {}
-    showBubble("i'm listening 🎙️ talk away (tap mic to stop)");
+    showBubble("i'm listening, talk away (tap mic to stop)");
     listenTurn();
   });
 
@@ -380,7 +380,7 @@ export function initCompanion() {
     });
   }, undefined, (e) => {
     console.error('[companion] avatar load failed', e);
-    bubble.textContent = "couldn't load me 😣"; bubble.style.opacity = 1;
+    bubble.textContent = "couldn't load me"; bubble.style.opacity = 1;
     bubble.style.left = '50%'; bubble.style.top = '40%';
   });
 
