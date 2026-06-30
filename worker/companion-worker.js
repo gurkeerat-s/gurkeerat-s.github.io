@@ -63,14 +63,15 @@ export default {
       let el;
       try {
         el = await fetch(
-          `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?optimize_streaming_latency=2`,
+          `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?optimize_streaming_latency=3`,
           {
             method: "POST",
             headers: { "xi-api-key": key, "content-type": "application/json", accept: "audio/mpeg" },
             body: JSON.stringify({
               text,
               model_id: TTS_MODEL,
-              voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
+              // speed > 1 makes her talk a touch faster; higher latency-optimization = quicker first audio
+              voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.2, use_speaker_boost: true, speed: 1.12 },
             }),
           }
         );

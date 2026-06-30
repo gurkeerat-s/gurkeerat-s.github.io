@@ -297,19 +297,47 @@ export function initCompanion() {
     }
   });
 
-  // --- voice input: push-to-talk ---
+  // --- voice input: hands-free conversation mode. One tap opens the mic for ~60s of back-and-forth:
+  //     you talk, she answers, the mic re-opens for your next turn, until the timer ends or you tap again. ---
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recog = null, listening = false;
+  let recog = null, convoActive = false, convoDeadline = 0, convoTimer = null;
+  const CONVO_MS = 60000;
+
+  function stopConvo() {
+    convoActive = false;
+    if (convoTimer) { clearTimeout(convoTimer); convoTimer = null; }
+    try { recog && recog.stop(); } catch (e) {}
+    recog = null;
+    micBtn.classList.remove('live');
+  }
+
+  function listenTurn() {
+    if (!convoActive) return;
+    if (Date.now() >= convoDeadline) { stopConvo(); showBubble("mic timed out 🙂 tap me to talk again"); return; }
+    recog = new SR(); recog.lang = 'en-US'; recog.interimResults = false; recog.continuous = false; recog.maxAlternatives = 1;
+    let handled = false;
+    recog.onresult = (e) => {
+      handled = true;
+      const txt = (e.results[0][0].transcript || '').trim();
+      if (txt) handleUser(txt).then(() => { if (convoActive) listenTurn(); });   // answer, then re-open the mic for the next turn
+      else if (convoActive) listenTurn();
+    };
+    recog.onerror = (ev) => {
+      if (ev.error === 'not-allowed') { showBubble('mic blocked, type to me instead!'); stopConvo(); }
+    };
+    recog.onend = () => { if (!handled && convoActive) setTimeout(() => { if (convoActive) listenTurn(); }, 150); }; // silence: keep listening
+    try { recog.start(); } catch (e) {}
+  }
+
   micBtn.addEventListener('click', () => {
     if (!SR) { showBubble("voice input works best in chrome 😅 just type to me!"); return; }
-    if (listening) { try { recog.stop(); } catch (e) {} return; }
-    speechSynthesis.cancel();
-    recog = new SR(); recog.lang = 'en-US'; recog.interimResults = false; recog.continuous = false; recog.maxAlternatives = 1;
-    recog.onstart = () => { listening = true; micBtn.classList.add('live'); showBubble('listening… 🎙️'); };
-    recog.onresult = (e) => { const txt = (e.results[0][0].transcript || '').trim(); if (txt) handleUser(txt); };
-    recog.onerror = (ev) => { if (ev.error === 'not-allowed') showBubble('mic blocked, type to me instead!'); };
-    recog.onend = () => { listening = false; micBtn.classList.remove('live'); };
-    try { recog.start(); } catch (e) {}
+    if (convoActive) { stopConvo(); showBubble("okay, mic off 🙂"); return; }
+    convoActive = true; convoDeadline = Date.now() + CONVO_MS;
+    convoTimer = setTimeout(() => { stopConvo(); showBubble("mic timed out 🙂 tap me to talk again"); }, CONVO_MS);
+    micBtn.classList.add('live');
+    try { speechSynthesis.cancel(); } catch (e) {}
+    showBubble("i'm listening 🎙️ talk away (tap mic to stop)");
+    listenTurn();
   });
 
   // contact "ground" under her feet so she reads as standing, not floating. The texture is white; we
@@ -474,7 +502,7 @@ export function initCompanion() {
     started = false;
     try { speechSynthesis.cancel(); } catch (e) {}
     if (currentSrc) { try { currentSrc.stop(); } catch (e) {} }
-    if (recog && listening) { try { recog.stop(); } catch (e) {} }
+    stopConvo();
     document.documentElement.classList.remove('cmp-active');
     window.removeEventListener('resize', resize);
     renderer.dispose();
