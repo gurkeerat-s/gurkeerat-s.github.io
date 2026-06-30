@@ -3,6 +3,7 @@
 // head sway, arm sway, blink). The page stays usable (pointer-events:none on the stage).
 import * as THREE from 'https://esm.sh/three@0.170.0';
 import { GLTFLoader } from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/FBXLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from 'https://esm.sh/@pixiv/three-vrm@3.4.0?deps=three@0.170.0';
 
 const LINES = [
@@ -27,10 +28,75 @@ const LINES = [
 // API key server-side. See worker/companion-worker.js.
 const WORKER = 'https://companion-chat.gurkeeratsappal.workers.dev';
 
-// --- smooth value-noise: organic, non-repeating drift. Beats stacked sines (which read as robotic). ---
-function hash(n) { const s = Math.sin(n * 127.1) * 43758.5453; return (s - Math.floor(s)) * 2 - 1; }
-function noise(x) { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return hash(i) * (1 - u) + hash(i + 1) * u; }
-function fbm(x) { return noise(x) * 0.6 + noise(x * 2.1 + 5.2) * 0.3 + noise(x * 4.3 + 9.1) * 0.1; }
+// Mixamo mocap animations (real, fluid) retargeted onto the VRM skeleton. Hosted on jsdelivr (CORS-open).
+const MIXAMO_BASE = 'https://cdn.jsdelivr.net/gh/wass08/r3f-virtual-girlfriend-frontend@main/public/animations/';
+const IDLE_CLIP = 'Standing%20Idle.fbx';
+const TALK_CLIPS = ['Talking_0.fbx', 'Talking_1.fbx', 'Talking_2.fbx'];
+
+// Mixamo rig bone -> VRM humanoid bone. Keys are prefix-less; the loader strips any "mixamorig"/"mixamorig:"
+// prefix before lookup, so this works whether or not the FBX kept Mixamo's bone-name prefix.
+const mixamoVRMRigMap = {
+  Hips: 'hips', Spine: 'spine', Spine1: 'chest', Spine2: 'upperChest', Neck: 'neck', Head: 'head',
+  LeftShoulder: 'leftShoulder', LeftArm: 'leftUpperArm', LeftForeArm: 'leftLowerArm', LeftHand: 'leftHand',
+  LeftHandThumb1: 'leftThumbMetacarpal', LeftHandThumb2: 'leftThumbProximal', LeftHandThumb3: 'leftThumbDistal',
+  LeftHandIndex1: 'leftIndexProximal', LeftHandIndex2: 'leftIndexIntermediate', LeftHandIndex3: 'leftIndexDistal',
+  LeftHandMiddle1: 'leftMiddleProximal', LeftHandMiddle2: 'leftMiddleIntermediate', LeftHandMiddle3: 'leftMiddleDistal',
+  LeftHandRing1: 'leftRingProximal', LeftHandRing2: 'leftRingIntermediate', LeftHandRing3: 'leftRingDistal',
+  LeftHandPinky1: 'leftLittleProximal', LeftHandPinky2: 'leftLittleIntermediate', LeftHandPinky3: 'leftLittleDistal',
+  RightShoulder: 'rightShoulder', RightArm: 'rightUpperArm', RightForeArm: 'rightLowerArm', RightHand: 'rightHand',
+  RightHandPinky1: 'rightLittleProximal', RightHandPinky2: 'rightLittleIntermediate', RightHandPinky3: 'rightLittleDistal',
+  RightHandRing1: 'rightRingProximal', RightHandRing2: 'rightRingIntermediate', RightHandRing3: 'rightRingDistal',
+  RightHandMiddle1: 'rightMiddleProximal', RightHandMiddle2: 'rightMiddleIntermediate', RightHandMiddle3: 'rightMiddleDistal',
+  RightHandIndex1: 'rightIndexProximal', RightHandIndex2: 'rightIndexIntermediate', RightHandIndex3: 'rightIndexDistal',
+  RightHandThumb1: 'rightThumbMetacarpal', RightHandThumb2: 'rightThumbProximal', RightHandThumb3: 'rightThumbDistal',
+  LeftUpLeg: 'leftUpperLeg', LeftLeg: 'leftLowerLeg', LeftFoot: 'leftFoot', LeftToeBase: 'leftToes',
+  RightUpLeg: 'rightUpperLeg', RightLeg: 'rightLowerLeg', RightFoot: 'rightFoot', RightToeBase: 'rightToes',
+};
+const stripRig = (n) => n.replace(/^mixamorig:?/i, '');
+
+// Adapted from pixiv/three-vrm's official loadMixamoAnimation example: retarget a Mixamo FBX clip to a VRM.
+function loadMixamoAnimation(url, vrm) {
+  const loader = new FBXLoader();
+  return loader.loadAsync(url).then((asset) => {
+    const clip = THREE.AnimationClip.findByName(asset.animations, 'mixamo.com');
+    const tracks = [];
+    const restRotationInverse = new THREE.Quaternion();
+    const parentRestWorldRotation = new THREE.Quaternion();
+    const _quatA = new THREE.Quaternion();
+    const hipsNode = asset.getObjectByName('Hips') || asset.getObjectByName('mixamorigHips');
+    const motionHipsHeight = hipsNode.position.y;
+    const vrmHipsHeight = vrm.humanoid?.normalizedRestPose.hips.position[1];
+    const hipsPositionScale = vrmHipsHeight / motionHipsHeight;
+    clip.tracks.forEach((track) => {
+      const trackSplitted = track.name.split('.');
+      const mixamoRigName = trackSplitted[0];
+      const vrmBoneName = mixamoVRMRigMap[stripRig(mixamoRigName)];
+      const vrmNodeName = vrm.humanoid?.getNormalizedBoneNode(vrmBoneName)?.name;
+      const mixamoRigNode = asset.getObjectByName(mixamoRigName);
+      if (vrmNodeName != null) {
+        const propertyName = trackSplitted[1];
+        mixamoRigNode.getWorldQuaternion(restRotationInverse).invert();
+        mixamoRigNode.parent.getWorldQuaternion(parentRestWorldRotation);
+        if (track instanceof THREE.QuaternionKeyframeTrack) {
+          for (let i = 0; i < track.values.length; i += 4) {
+            const flatQuaternion = track.values.slice(i, i + 4);
+            _quatA.fromArray(flatQuaternion);
+            _quatA.premultiply(parentRestWorldRotation).multiply(restRotationInverse);
+            _quatA.toArray(flatQuaternion);
+            flatQuaternion.forEach((v, index) => { track.values[index + i] = v; });
+          }
+          tracks.push(new THREE.QuaternionKeyframeTrack(
+            `${vrmNodeName}.${propertyName}`, track.times,
+            track.values.map((v, i) => (vrm.meta?.metaVersion === '0' && i % 2 === 0 ? -v : v)),
+          ));
+        }
+        // NOTE: position (VectorKeyframeTrack) tracks are intentionally skipped — we don't want root
+        // motion on a planted companion, and the retargeted hips translation otherwise flings her off-screen.
+      }
+    });
+    return new THREE.AnimationClip('vrmAnimation', clip.duration, tracks);
+  });
+}
 
 let started = false;
 
@@ -123,9 +189,14 @@ export function initCompanion() {
   let blinkTimer = 2 + Math.random() * 2, blinkPhase = 0;
   let bubbleOn = false, lineTimer = 0.6, lineI = 0, chatHold = 0;
   let speaking = false, talk = 0, busy = false;
-  // idle "look-around" + head-tilt beats, and hand-gesture pulses (idle + talking)
-  let beatTimer = 1.2, glance = { x: 0, y: 0, z: 0 }, glanceTarget = { x: 0, y: 0, z: 0 };
-  let gestTimer = 1.0, handSide = 1, handAmt = 0, handTarget = 0, bothHands = false;
+  // mocap playback: AnimationMixer crossfading a looping idle clip <-> talking clips
+  let mixer = null, idleAction = null, talkActions = [], currentAction = null, talkSwitchT = 0;
+  function fadeTo(action, dur = 0.45) {
+    if (!action || action === currentAction) return;
+    if (currentAction) currentAction.fadeOut(dur);
+    action.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(dur).play();
+    currentAction = action;
+  }
   const B = (n) => vrm?.humanoid?.getNormalizedBoneNode(n);
 
   // show text in the bubble and hold it (pausing the auto-cycling idle lines)
@@ -191,7 +262,7 @@ export function initCompanion() {
   const history = [];
   async function askClaude(text) {
     history.push({ role: 'user', content: text });
-    let reply = "hmm, i glitched for a sec — try me again?";
+    let reply = "hmm, i glitched for a sec, try me again?";
     try {
       const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: history.slice(-10) }) });
@@ -229,7 +300,7 @@ export function initCompanion() {
     recog = new SR(); recog.lang = 'en-US'; recog.interimResults = false; recog.continuous = false; recog.maxAlternatives = 1;
     recog.onstart = () => { listening = true; micBtn.classList.add('live'); showBubble('listening… 🎙️'); };
     recog.onresult = (e) => { const txt = (e.results[0][0].transcript || '').trim(); if (txt) handleUser(txt); };
-    recog.onerror = (ev) => { if (ev.error === 'not-allowed') showBubble('mic blocked — type to me instead!'); };
+    recog.onerror = (ev) => { if (ev.error === 'not-allowed') showBubble('mic blocked, type to me instead!'); };
     recog.onend = () => { listening = false; micBtn.classList.remove('live'); };
     try { recog.start(); } catch (e) {}
   });
@@ -256,6 +327,17 @@ export function initCompanion() {
     VRMUtils.rotateVRM0(vrm);
     baseY = vrm.scene.rotation.y;
     scene.add(vrm.scene);
+
+    // load the mocap clips and start the idle loop; talking clips stand by for crossfade
+    mixer = new THREE.AnimationMixer(vrm.scene);
+    loadMixamoAnimation(MIXAMO_BASE + IDLE_CLIP, vrm)
+      .then((clip) => { idleAction = mixer.clipAction(clip); fadeTo(idleAction, 0.01); })
+      .catch((err) => console.error('[companion] idle clip failed', err));
+    TALK_CLIPS.forEach((f) => {
+      loadMixamoAnimation(MIXAMO_BASE + f, vrm)
+        .then((clip) => { talkActions.push(mixer.clipAction(clip)); })
+        .catch((err) => console.error('[companion] talk clip failed', f, err));
+    });
   }, undefined, (e) => {
     console.error('[companion] avatar load failed', e);
     bubble.textContent = "couldn't load me 😣"; bubble.style.opacity = 1;
@@ -269,80 +351,36 @@ export function initCompanion() {
     const dt = Math.min(clock.getDelta(), 0.05);
     if (vrm) {
       t += dt;
-      const breathe = Math.sin(t * 1.5);
-      const spine = B('spine'), chest = B('chest') || B('upperChest'), hips = B('hips');
-      const neck = B('neck'), head = B('head');
-      const lUA = B('leftUpperArm'), rUA = B('rightUpperArm');
-      const lLA = B('leftLowerArm'), rLA = B('rightLowerArm');
 
-      // --- lively idle: visible noise-driven weight-shift, sway, torso twist (bigger than before) ---
-      const swayA = fbm(t * 0.22), swayB = fbm(t * 0.17 + 13.0), swayC = fbm(t * 0.3 + 5);
-      if (hips) { hips.rotation.z = swayA * 0.09; hips.rotation.y = swayB * 0.06; }
-      if (spine) { spine.rotation.x = breathe * 0.045 - swayA * 0.03; spine.rotation.z = -swayA * 0.07; spine.rotation.y = swayB * 0.05; }
-      if (chest) { chest.rotation.x = breathe * 0.03; chest.rotation.z = swayC * 0.04; chest.rotation.y = swayB * 0.03; }
-
-      // --- gaze + signature anime head-tilt beats: ease toward a target, repick often ---
-      beatTimer -= dt;
-      if (beatTimer <= 0) {
-        glanceTarget.y = (Math.random() * 2 - 1) * 0.33;
-        glanceTarget.x = (Math.random() * 2 - 1) * 0.13;
-        glanceTarget.z = (Math.random() * 2 - 1) * 0.20;   // bigger HELD head-tilt (the cute anime tilt)
-        beatTimer = 1.8 + Math.random() * 2.6;             // more frequent
-      }
-      const ge = Math.min(1, dt * 2.2);
-      glance.x += (glanceTarget.x - glance.x) * ge;
-      glance.y += (glanceTarget.y - glance.y) * ge;
-      glance.z += (glanceTarget.z - glance.z) * ge;
-      if (neck) neck.rotation.y = glance.y * 0.4;
-      if (head) {
-        head.rotation.y = glance.y * 0.7 + fbm(t * 0.5 + 2) * 0.06;
-        head.rotation.x = glance.x + breathe * 0.02 + fbm(t * 0.6 + 7) * 0.05;
-        head.rotation.z = glance.z + fbm(t * 0.4 + 4) * 0.04;
-      }
-
-      // --- arms rest at sides (known-good z), with a touch of noise life ---
-      if (lUA) { lUA.rotation.z = 1.42 + fbm(t * 0.5) * 0.05; lUA.rotation.x = fbm(t * 0.5 + 3) * 0.05; }
-      if (rUA) { rUA.rotation.z = -1.42 - fbm(t * 0.5 + 8) * 0.05; rUA.rotation.x = fbm(t * 0.5 + 5) * 0.05; }
-      if (lLA) lLA.rotation.x = -0.16 + fbm(t * 0.55) * 0.05;
-      if (rLA) rLA.rotation.x = -0.16 + fbm(t * 0.55 + 6) * 0.05;
-
-      // --- hand-gesture pulses: frequent + big (sometimes two-handed) while talking, occasional + gentle while idle ---
-      talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 5);
-      gestTimer -= dt;
-      if (gestTimer <= 0 && handTarget === 0 && handAmt < 0.05) {   // fire a fresh gesture
-        handTarget = 1; handSide = -handSide;
-        bothHands = speaking && Math.random() < 0.4;
-        gestTimer = speaking ? (0.7 + Math.random() * 1.3) : (3.0 + Math.random() * 3.5);
-      }
-      handAmt += (handTarget - handAmt) * Math.min(1, dt * 4.8);
-      if (handTarget === 1 && handAmt > 0.8) handTarget = 0;          // raise, then settle back down
-      const g = handAmt * (speaking ? 1 : 0.35);
-      const gestArm = (UA, LA, amt) => { if (UA) UA.rotation.x += -0.6 * amt; if (LA) LA.rotation.x += -0.95 * amt; };
-      gestArm(handSide < 0 ? lUA : rUA, handSide < 0 ? lLA : rLA, g);                       // lead hand
-      gestArm(handSide < 0 ? rUA : lUA, handSide < 0 ? rLA : lLA, bothHands ? g * 0.85 : g * 0.18); // other hand
-
-      // --- talking energy: head + torso come alive, nodding harder on loud syllables ---
-      if (talk > 0.001) {
-        const emph = realAudio ? mouthLevel : (Math.sin(t * 9) * 0.5 + 0.5);
-        if (head) {
-          head.rotation.x += (Math.sin(t * 3.3) * 0.06 + emph * 0.08) * talk;
-          head.rotation.y += Math.sin(t * 2.1) * 0.11 * talk;
-          head.rotation.z += Math.sin(t * 2.7) * 0.04 * talk;
+      // --- body: real Mixamo mocap via the mixer. Crossfade idle <-> talking; rotate talking clips for variety ---
+      if (mixer) {
+        mixer.update(dt);
+        if (speaking && talkActions.length) {
+          talkSwitchT -= dt;
+          if (!talkActions.includes(currentAction) || talkSwitchT <= 0) {
+            let next = talkActions[(Math.random() * talkActions.length) | 0];
+            if (next === currentAction) next = talkActions[(talkActions.indexOf(next) + 1) % talkActions.length];
+            fadeTo(next);
+            talkSwitchT = 3 + Math.random() * 3;
+          }
+        } else if (!speaking && idleAction) {
+          fadeTo(idleAction);
         }
-        if (spine) spine.rotation.x += Math.sin(t * 2.2) * 0.025 * talk;
-        if (chest) chest.rotation.y += Math.sin(t * 1.7) * 0.04 * talk;
       }
+      talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 5);
 
-      // --- expressions: gentle near-constant smile that livens up when talking + audio-driven lip-sync ---
+      // --- expressions ride on top of the mocap (separate from the skeleton, so no conflict) ---
+      // gentle near-constant smile that brightens when talking
       const smile = 0.1 + 0.05 * (Math.sin(t * 0.5) * 0.5 + 0.5) + 0.16 * talk;
       vrm.expressionManager?.setValue('happy', Math.min(0.4, smile));
+      // audio-driven lip-sync (falls back to an oscillation when there's no real audio level)
       const mouth = speaking
         ? (realAudio ? Math.min(0.9, 0.08 + mouthLevel * 1.15) : (0.16 + 0.22 * (Math.sin(t * 13) * 0.5 + 0.5)))
         : 0;
       vrm.expressionManager?.setValue('aa', mouth);
 
-      vrm.scene.position.y = breathe * 0.02;
       vrm.scene.position.x = HOME_X;
+      vrm.scene.position.y = 0;
       vrm.scene.rotation.y = baseY;
       shadow.position.x = HOME_X;
 
