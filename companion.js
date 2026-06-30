@@ -376,10 +376,10 @@ export function initCompanion() {
       }
       talk += ((speaking ? 1 : 0) - talk) * Math.min(1, dt * 5);
 
-      // --- keep her facing the viewer while talking: damp the torso's yaw twist from the clip
-      //     (the talk clips turn her ~30 deg to the side; this rotates her back toward front) ---
-      if (talk > 0.01) {
-        const damp = 1 - 0.6 * talk;
+      // --- keep her facing the viewer: damp the torso's yaw twist from the clip. The idle + talk clips
+      //     both stand her at a 3/4 angle; flattening the yaw rotates her back toward front (the viewer). ---
+      {
+        const damp = 0.3;  // keep only ~30% of the clip's turn, so she faces forward but isn't rigid
         const hipsT = B('hips'), spineT = B('spine'), chestT = B('chest') || B('upperChest'), neckT = B('neck');
         if (hipsT) hipsT.rotation.y *= damp;
         if (spineT) spineT.rotation.y *= damp;
@@ -387,14 +387,14 @@ export function initCompanion() {
         if (neckT) neckT.rotation.y *= damp;
       }
 
-      // --- idle weight-shift: a slow lean layered on the mocap so she sways foot-to-foot when quiet ---
+      // --- idle weight-shift: a clear slow sway layered on the mocap so she shifts foot-to-foot when quiet ---
       const idleAmt = 1 - Math.min(1, talk * 2);
       if (idleAmt > 0.01) {
-        const sway = Math.sin(t * 0.5), sway2 = Math.sin(t * 0.33 + 1);
+        const sway = Math.sin(t * 0.55), sway2 = Math.sin(t * 0.37 + 1);
         const hips = B('hips'), spine = B('spine'), head = B('head');
-        if (hips) hips.rotation.z += sway * 0.055 * idleAmt;
-        if (spine) spine.rotation.z += -sway * 0.03 * idleAmt;
-        if (head) head.rotation.z += sway2 * 0.025 * idleAmt;
+        if (hips) hips.rotation.z += sway * 0.1 * idleAmt;
+        if (spine) spine.rotation.z += -sway * 0.055 * idleAmt;
+        if (head) { head.rotation.z += sway2 * 0.045 * idleAmt; head.rotation.y += sway2 * 0.07 * idleAmt; }
       }
 
       // --- eyes: drift the lookAt target around, mostly toward the viewer, with occasional glances ---
