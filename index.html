@@ -61,6 +61,9 @@
   footer a{text-decoration:none; border-bottom:1px solid var(--line)}
   footer a:hover{color:var(--accent)}
   .contact{display:flex; flex-wrap:wrap; gap:18px; margin-top:8px}
+  #copy-email{cursor:pointer; border-bottom:1px solid var(--line)}
+  #copy-email:hover{color:var(--accent)}
+  #copy-email.copied{color:var(--accent); border-bottom-color:var(--accent)}
   #summon-btn{position:fixed; right:20px; bottom:20px; z-index:40; font:inherit; font-size:13px;
     padding:9px 14px; border-radius:999px; cursor:pointer; background:var(--fg); color:var(--bg);
     border:none; box-shadow:0 6px 20px rgba(0,0,0,.18)}
@@ -181,7 +184,7 @@
 
   <footer id="contact">
     <div class="contact">
-      <span>gurkeeratsappal@gmail.com</span>
+      <span id="copy-email" title="click to copy" data-email="gurkeeratsappal@gmail.com">gurkeeratsappal@gmail.com</span>
       <a href="https://github.com/gurkeerat-s">github</a>
       <a href="https://www.linkedin.com/in/gurkeerat-sappal">linkedin</a>
     </div>
@@ -200,6 +203,20 @@
     const dark = !root.classList.contains('dark');
     setTheme(dark);
     localStorage.setItem('theme', dark ? 'dark' : 'light');
+  });
+
+  // click the email to copy it to the clipboard
+  const emailEl = document.getElementById('copy-email');
+  if (emailEl) emailEl.addEventListener('click', async () => {
+    const addr = emailEl.dataset.email;
+    try { await navigator.clipboard.writeText(addr); }
+    catch (e) {
+      const t = document.createElement('textarea'); t.value = addr; document.body.appendChild(t);
+      t.select(); try { document.execCommand('copy'); } catch (_) {} t.remove();
+    }
+    const orig = emailEl.textContent;
+    emailEl.textContent = 'copied!'; emailEl.classList.add('copied');
+    setTimeout(() => { emailEl.textContent = orig; emailEl.classList.remove('copied'); }, 1400);
   });
 </script>
 
